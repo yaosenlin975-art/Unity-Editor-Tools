@@ -1,0 +1,16 @@
+/*
+┌──────────────┐                                   
+│　类名: #SCRIPTNAME#
+│　功能说明: 
+└──────────────┘
+*/
+using UnityEngine;
+using Unity.Entities;
+
+#ROOTNAMESPACEBEGIN#
+struct #SCRIPTNAME# : IComponentData
+{
+#NOTRIM#
+}
+
+#ROOTNAMESPACEEND#

@@ -24,7 +24,7 @@ namespace Lin.Editor.Settings
             provider = new SettingsProvider(PagePath, SettingsScope.Project)
             {
                 label = EditorAnnotationLocalization.Text(EAnnotationText.SettingsPageLabel),
-                keywords = new HashSet<string> { "Annotation", "Hierarchy", "Toolbar", "注释", "Description", "Summary", "脚本", "Import", "导入策略" },
+                keywords = new HashSet<string> { "Annotation", "Hierarchy", "Toolbar", "注释", "Description", "Summary", "脚本", "Import", "导入策略", "TODO", "Todo" },
                 guiHandler = _ => DrawGUI()
             };
             EditorAnnotationLocalization.LanguageChanged -= OnLanguageChanged;
@@ -85,6 +85,7 @@ namespace Lin.Editor.Settings
 
             ImportPolicySection();
             SceneViewOverlaySection();
+            TodoSection();
 
             // Project 窗口的绘制结果带缓存，样式或标识变了要重扫；Hierarchy 每帧现读，不需要
             if (changed)
@@ -144,6 +145,28 @@ namespace Lin.Editor.Settings
                 settings.sceneRendererInfoEnabled, v => settings.sceneRendererInfoEnabled = v, EditorAnnotationLocalization.Text(EAnnotationText.RendererInfoEnabledTooltip));
             changed |= ColorField(nameof(ToolsSettings_SO.sceneRendererInfoColor), EditorAnnotationLocalization.Text(EAnnotationText.RendererInfoColor),
                 settings.sceneRendererInfoColor, v => settings.sceneRendererInfoColor = v);
+
+            if (changed)
+                ToolsSettings_SO.Save();
+        }
+
+        /// <summary>
+        /// TODO 收集段：TodoCollector 与 Learn 的 ScriptTodoWindow 共用的输出目录与两个忽略表，
+        /// 随 TodoCollector 从宿主 EditorSettings_SO 并级。与导入策略段同理：改动不进外层 changed，
+        /// 但 AssetDatabase 看不见这个 SO，写完必须立刻 Save()。
+        /// </summary>
+        private static void TodoSection()
+        {
+            var settings = ToolsSettings_SO.Instance;
+            bool changed = false;
+
+            Section(EditorAnnotationLocalization.Text(EAnnotationText.TodoSection));
+            changed |= StringField(nameof(ToolsSettings_SO.docsOutputFolderName), EditorAnnotationLocalization.Text(EAnnotationText.TodoDocsFolder),
+                settings.docsOutputFolderName, v => settings.docsOutputFolderName = v, EditorAnnotationLocalization.Text(EAnnotationText.TodoDocsFolderTooltip));
+            changed |= StringListField(nameof(ToolsSettings_SO.todoIgnoreFolders), EditorAnnotationLocalization.Text(EAnnotationText.TodoIgnoreFolders),
+                settings.todoIgnoreFolders?.ToArray(), v => settings.todoIgnoreFolders = new List<string>(v));
+            changed |= StringListField(nameof(ToolsSettings_SO.todoIgnoreAssemblies), EditorAnnotationLocalization.Text(EAnnotationText.TodoIgnoreAssemblies),
+                settings.todoIgnoreAssemblies?.ToArray(), v => settings.todoIgnoreAssemblies = new List<string>(v));
 
             if (changed)
                 ToolsSettings_SO.Save();
@@ -379,7 +402,12 @@ namespace Lin.Editor.Settings
         SceneViewSection,
         RendererInfoEnabled,
         RendererInfoEnabledTooltip,
-        RendererInfoColor
+        RendererInfoColor,
+        TodoSection,
+        TodoDocsFolder,
+        TodoDocsFolderTooltip,
+        TodoIgnoreFolders,
+        TodoIgnoreAssemblies
     }
 
     internal static class EditorAnnotationLocalization
@@ -449,7 +477,12 @@ namespace Lin.Editor.Settings
                 { EAnnotationText.SceneViewSection, ("SceneView 叠加", "SceneView overlay") },
                 { EAnnotationText.RendererInfoEnabled, ("显示选中物体信息", "Show selected object info") },
                 { EAnnotationText.RendererInfoEnabledTooltip, ("在 SceneView 里绘制选中物体的包围盒，并统计顶点数与三角面数。", "Draws the selected object's bounds in the SceneView with vertex and triangle counts.") },
-                { EAnnotationText.RendererInfoColor, ("信息颜色", "Info color") }
+                { EAnnotationText.RendererInfoColor, ("信息颜色", "Info color") },
+                { EAnnotationText.TodoSection, ("TODO 收集", "TODO collection") },
+                { EAnnotationText.TodoDocsFolder, ("输出目录名", "Output folder name") },
+                { EAnnotationText.TodoDocsFolderTooltip, ("Todos.md 写到项目根下的这个目录。", "Todos.md is written to this folder under the project root.") },
+                { EAnnotationText.TodoIgnoreFolders, ("忽略的文件夹", "Ignored folders") },
+                { EAnnotationText.TodoIgnoreAssemblies, ("忽略的程序集", "Ignored assemblies") }
             };
 
         public static event System.Action LanguageChanged;

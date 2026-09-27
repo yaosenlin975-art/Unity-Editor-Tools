@@ -101,6 +101,15 @@ namespace Lin.Editor.Asset
             return ReadValue<T>(self.userData, key);
         }
 
+        /// <summary>取原生字符串值：字符串标量解包成它自己的内容，其余给紧凑 JSON；无值给空串（不返回 null）。</summary>
+        public static string GetUserData(this AssetImporter self, string key)
+        {
+            if (self == null)
+                return string.Empty;
+
+            return TryGetValue(self.userData, key) ?? string.Empty;
+        }
+
         internal static T ReadValue<T>(string userData, string key)
         {
             var json = TryGetValue(userData, key);
@@ -156,6 +165,13 @@ namespace Lin.Editor.Asset
         }
 
         public static string GetAssetGUID(this AssetImporter self) => AssetDatabase.AssetPathToGUID(self.assetPath);
+
+        /// <summary>GUID 反查导入器；GUID 落不到资产路径时给 null。</summary>
+        public static AssetImporter FromGUID(string guid)
+        {
+            var path = AssetDatabase.GUIDToAssetPath(guid);
+            return string.IsNullOrEmpty(path) ? null : AssetImporter.GetAtPath(path);
+        }
 
         #endregion
 

@@ -1,0 +1,23 @@
+/*
+┌────────────────────────────┐
+│　Description: 
+│　Remark: 
+└────────────────────────────┘
+*/
+
+    #ROOTNAMESPACEBEGIN#
+public class #SCRIPTNAME#
+{
+    #region - Fields -
+
+    #endregion
+
+    #region - Public Methods -
+
+    #endregion
+
+    #region - Private Methods -
+
+    #endregion
+}
+#ROOTNAMESPACEEND#

@@ -1,0 +1,16 @@
+/*
+┌────────────────────────────┐
+│　Description: 
+│　Remark: 
+└────────────────────────────┘
+*/
+using Lin.Runtime.Manager;
+
+#ROOTNAMESPACEBEGIN#
+
+public partial class #SCRIPTNAME# : AuthoringSceneSystemGroup
+{
+    protected override string AuthoringSceneName => "YourSceneName";
+}       
+
+#ROOTNAMESPACEEND#

@@ -21,7 +21,10 @@ namespace Lin.Editor.Settings
         internal const int ImportMergeVersion = 2;
 
         /// <summary>v3：SceneView 叠加的两个字段（开关 + 颜色）随 SceneRendererInfoDrawer 从宿主 EditorSettings_SO 移植并级。</summary>
-        internal const int CurrentVersion = 3;
+        internal const int SceneOverlayVersion = 3;
+
+        /// <summary>v4：TODO 收集的三个字段（输出目录名 + 两个忽略表）随 TodoCollector 从宿主 EditorSettings_SO 移植并级。</summary>
+        internal const int CurrentVersion = 4;
 
         public int settingsVersion;
 
@@ -62,6 +65,14 @@ namespace Lin.Editor.Settings
 
         /// <summary>叠加的线框与文字颜色；默认取不透明灰——alpha 0 画出来是隐形的，不能当默认。</summary>
         public Color sceneRendererInfoColor = Color.gray;
+
+        // ----------------- TODO 收集（原宿主 EditorSettings_SO 的 docsOutputFolderName / todoIgnore*，随 TodoCollector 移植并级） -----------------
+
+        /// <summary>Todos.md 的输出目录名，相对项目根。</summary>
+        public string docsOutputFolderName = "Markdown";
+
+        public List<string> todoIgnoreFolders = new List<string>();
+        public List<string> todoIgnoreAssemblies = new List<string>();
 
         // 版本号只有 settingsVersion 一个（原 importPolicyVersion 已删：第二个版本字段没人读、只会撒谎，
         // 导入策略那一段的形状由 Migrate 的 v1→v2 级负责）。
@@ -162,6 +173,9 @@ namespace Lin.Editor.Settings
         ///
         /// v2 → v3：SceneView 叠加两个字段（sceneRendererInfoEnabled / sceneRendererInfoColor）随绘制器移植并级，
         /// 同样只补新字段。开关默认关等于不动；颜色以 alpha 0 为"未设置"判据补默认（不透明灰），真调过的颜色原样保留。
+        ///
+        /// v3 → v4：TODO 收集三个字段随 TodoCollector 移植并级，只补新字段。目录名空回默认 "Markdown"，
+        /// 两个忽略表 null 回空表（老文件缺字段反序列化成 null）。
         /// </summary>
         internal void Migrate()
         {
@@ -204,8 +218,18 @@ namespace Lin.Editor.Settings
                 return;
             }
 
-            // v2 → v3：sceneRendererInfoEnabled 不碰（默认关即不动）
-            sceneRendererInfoColor = sceneRendererInfoColor.a > 0f ? sceneRendererInfoColor : fresh.sceneRendererInfoColor;
+            if (settingsVersion < SceneOverlayVersion)
+            {
+                // v2 → v3：sceneRendererInfoEnabled 不碰（默认关即不动）
+                sceneRendererInfoColor = sceneRendererInfoColor.a > 0f ? sceneRendererInfoColor : fresh.sceneRendererInfoColor;
+                settingsVersion = SceneOverlayVersion;
+                return;
+            }
+
+            // v3 → v4：TODO 段三个字段；目录名空则回默认，忽略表 null 回空表（老文件缺字段会被反序列化成 null）
+            docsOutputFolderName = string.IsNullOrEmpty(docsOutputFolderName) ? fresh.docsOutputFolderName : docsOutputFolderName;
+            todoIgnoreFolders = todoIgnoreFolders ?? new List<string>();
+            todoIgnoreAssemblies = todoIgnoreAssemblies ?? new List<string>();
 
             settingsVersion = CurrentVersion;
         }

@@ -1,0 +1,22 @@
+/*
+┌──────────────┐                                   
+│　类名: #SCRIPTNAME#
+│　功能说明: 
+└──────────────┘
+*/
+using UnityEngine;
+using Unity.Entities;
+
+#ROOTNAMESPACEBEGIN#
+public class #SCRIPTNAME#Authoring : MonoBehaviour
+{
+    public class Baker : Baker<#SCRIPTNAME#Authoring>
+    {
+        public override void Bake(#SCRIPTNAME#Authoring authoring)
+        {
+		var entity = GetEntity(TransformUsageFlags.Dynamic);
+        }
+    }
+}
+
+#ROOTNAMESPACEEND#

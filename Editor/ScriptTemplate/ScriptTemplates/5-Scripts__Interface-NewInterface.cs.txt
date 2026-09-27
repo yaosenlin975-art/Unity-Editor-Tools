@@ -1,0 +1,14 @@
+/*
+┌────────────────────────────┐
+│　Description: 
+│　Remark: 
+└────────────────────────────┘
+*/
+using UnityEngine;
+
+    #ROOTNAMESPACEBEGIN#
+public interface #SCRIPTNAME#
+{
+
+}
+#ROOTNAMESPACEEND#

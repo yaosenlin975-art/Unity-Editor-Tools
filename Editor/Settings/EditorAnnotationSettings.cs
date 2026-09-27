@@ -114,6 +114,24 @@ namespace Lin.Editor.Settings
             set { ToolsSettings_SO.Instance.scriptDescriptionScanMaxLines = Mathf.Max(1, value); ToolsSettings_SO.Save(); }
         }
 
+        // ----------------- TODO 收集（原宿主 EditorSettings_SO 的 docsOutputFolderName / todoIgnore*） -----------------
+
+        /// <summary>Todos.md 的输出目录名，相对项目根。</summary>
+        public static string DocsOutputFolderName
+        {
+            get => ToolsSettings_SO.Instance.docsOutputFolderName;
+            set { ToolsSettings_SO.Instance.docsOutputFolderName = value; ToolsSettings_SO.Save(); }
+        }
+
+        /// <summary>忽略的文件夹前缀表。返回 SO 里的活对象，就地增删改后调 <see cref="SaveTodoSettings"/> 落盘。</summary>
+        public static List<string> TodoIgnoreFolders => ToolsSettings_SO.Instance.todoIgnoreFolders;
+
+        /// <summary>忽略的程序集名表，用法同 <see cref="TodoIgnoreFolders"/>。</summary>
+        public static List<string> TodoIgnoreAssemblies => ToolsSettings_SO.Instance.todoIgnoreAssemblies;
+
+        /// <summary>把两个忽略表的就地修改落盘（SO 不是 AssetDatabase 资产，SetDirty/SaveAssets 对它无效）。</summary>
+        public static void SaveTodoSettings() => ToolsSettings_SO.Save();
+
         /// <summary>
         /// 只读脚本头部若干行，两处 .cs 注释扫描（Project 绘制、Markdown 汇总）共用。行与行之间补回 \n，
         /// 使既有的 Contains + 正则逐行提取逻辑不变。maxLines 由调用方传入 <see cref="ScriptDescriptionScanMaxLines"/>：

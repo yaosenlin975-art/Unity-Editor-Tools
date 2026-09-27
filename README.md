@@ -30,7 +30,14 @@
 | SceneView 标注 | `ShowInSceneGUI` 展示字段、属性和按钮；`DrawInSceneGUI` 执行自定义绘制回调 |
 | Inspector 快捷操作 | `[Name]` 为组件右键菜单中的 GameObject 重命名提供目标名称 |
 | 默认资源 Inspector | 文件夹与 `DefaultImporter` 资产的 Inspector：注释详情、自定义链接（URI）增删改与打开、文件夹子资源树浏览 |
-| 设置与本地化 | 注释样式、脚本描述标识、点击行为和中英文切换；Project Settings 与包自带菜单均提供入口 |
+| TextAsset 工具 | `[CustomEditor(typeof(TextAsset))]` 文本查看/编辑/保存；另含创建 TextAsset、批量转 UTF-8、Json 格式化三个菜单 |
+| 文本编码导入 | `ChineseTextAssetImporter` 在导入时把非 UTF-8 的 `.cs/.txt/.lua/.json` 自动转成带 BOM 的 UTF-8（无开关） |
+| 脚本模板 | 15 个带项目头注释/分区的 `新建脚本` 模板，首次装载自动复制到宿主 `Assets/ScriptTemplates`，菜单 `Lin/脚本模板` 可手动补 |
+| 组件自动获取 | `[Get]` / `[GetInChild]` / `[GetInParent]` 标注的字段在脚本重载时自动填组件，菜单 `Lin/获取组件` 可手动触发 |
+| 编辑器助手 | `Lin.Editor.Helper` 下的 `EditorGUIHelper` / `PathHelper` / `ScriptableObjectHelper` 三个静态助手 |
+| 宏管理 | `Lin/Macros` 窗口：按 `BuildTargetGroup` 增删脚本宏（scripting define symbols），并落一份 `<平台>-Macros.json` 到项目根 |
+| 脚本 TODO 收集 | `Lin/脚本/收集TODO` 扫描 `Assets/` 下的 `.cs` 生成 `Todos.md`；亦在每次脚本重载时自动收集 |
+| 设置与本地化 | 注释样式、脚本描述标识、点击行为、导入策略、SceneView 叠加、TODO 收集和中英文切换；Project Settings 与包自带菜单均提供入口 |
 
 ### 资源与文件夹注释
 
@@ -67,6 +74,20 @@
 选中**文件夹**时，Inspector 还会递归列出整棵子树：`.meta` 被跳过，每条显示图标、名字与该条自己的注释标题；点一条在 Project 窗口里 ping 它，再点同一条即打开该资源。
 
 > 代价：这棵树是在 `OnEnable` 里用 `Directory.GetFiles/GetDirectories` 递归扫文件系统建起来的，每条还要查一次 importer 与缓存图标，并且**每次换选中都重算**。选中 `Assets/` 这类大目录会明显卡顿。要快就别在 Inspector 里停在大目录上（本包不为它提供开关或缓存）。这一段界面的文字是固定的中文，不在中英切换范围内。
+
+### TextAsset Inspector 与文本编码导入
+
+本包用 `[CustomEditor(typeof(TextAsset))]` 接管了**所有** `TextAsset`（`.txt`/`.json`/`.csv`/`.bytes` 等）的 Inspector：直接显示文件内容，可点 **修改** 进文本框编辑、**保存** 写回（保持原编码，会触发一次 `AssetDatabase.Refresh`）。另有三个菜单：
+
+- `Assets/Create/TextAsset`：在当前选中的 Project 文件夹里新建一个空 `.txt`；
+- `Lin/批量转换文件编码为UTF-8`：从 `Application.dataPath` 递归扫描所有 `.cs`/`.txt`（跳过 `Library`/`Temp`/`Logs` 与点开头目录），非 UTF-8 的就地转为带 BOM 的 UTF-8，带进度条可取消；
+- `Assets/Json格式化`：把选中的 TextAsset 逐个按 JSON 解析并缩进写回（保持原编码，非 JSON 会记失败）。
+
+> **破坏性变更**：装了本包的工程，所有 `TextAsset` 的 Inspector 归本包所有；与别的 TextAsset Inspector 包共存时的优先级由 Unity 的 CustomEditor 解析规则决定。
+
+同时，`ChineseTextAssetImporter`（`AssetPostprocessor`）会在**每次资源导入**时检测 `.cs` / `.txt` / `.lua` / `.json`：非 UTF-8 的就地改写为**带 BOM** 的 UTF-8 并重新导入。
+
+> **破坏性变更**：这是**无条件、无开关**的自动改写，会脏化源文件、可能引发脚本重编译。`.bytes` 视为二进制容器，不参与转换。决策与代价见 `docs/adr/0009`。
 
 ### 脚本注释
 
@@ -118,7 +139,7 @@ public class SceneViewHints : MonoBehaviour
 
 ### 配置页
 
-**Project Settings → Lin Editor Tools**，三段：资源注释、场景物体注释、脚本注释。字号限定 8–32；改动会自动重绘 Project 窗口。
+**Project Settings → Lin Editor Tools**，分段：资源注释、场景物体注释、脚本注释（含描述标识）、导入策略、SceneView 叠加、TODO 收集。字号限定 8–32；注释类改动会自动重绘 Project 窗口，导入策略 / SceneView 叠加 / TODO 收集三段改动后立即写盘。
 
 9 个注释显示设置存在宿主的 `ProjectSettings/LinEditorTools.asset`（本包首次读到就自动生成，文本序列化、可 diff、进版本库、团队共享）。界面语言与主工具栏开关态是**本机本用户**偏好，仍存 `EditorPrefs`（key 前缀 `com.lin.editor-annotation/`），不进版本库——否则一个人切英文会替全组切。
 
@@ -198,6 +219,34 @@ public class PlayerController : MonoBehaviour { }
 
 之后在该组件的右键菜单里选 **修改GameObject的名字 / Rename GameObject**，物体名字改成特性里的值（未标特性则改成类名）。`NameAttribute` 位于 Runtime 程序集，因为使用方要把它标在自己的运行时脚本上。
 
+### 脚本模板与组件自动获取
+
+包自带 15 个 `新建脚本` 模板（MonoBehaviour / ScriptableObject / Class / Struct / Interface / 两种单例 / 若干 DOTS 类型），首次加载时复制到宿主 `Assets/ScriptTemplates`，重启编辑器后出现在 Project 右键 **Create → Scripting** 菜单；菜单 `Lin/脚本模板` 可手动触发同一复制（已存在的文件不覆盖）。**注意**：这是对宿主 `Assets/` 的写行为，且复制完成后会弹窗询问是否立即重启；模板生成的是**宿主**脚本，其中单例 / DOTS 模板引用了 `Lin.Runtime.*`，只对使用该框架的工程有意义。
+
+`[Get]` / `[GetInChild("路径")]` / `[GetInParent]` 三个特性标注 MonoBehaviour 的字段后，本包会在**每次脚本重载**时扫描已加载场景里所有 MonoBehaviour，把为空的字段按标注自动填上组件；也可用菜单 `Lin/获取组件` 手动触发。字段非 public 时必须带 `[SerializeField]`，填不上会打一条错误日志。代价：这项扫描在每个装了本包的工程、每次重载都会跑一遍。
+
+> 三个特性位于包 Runtime 程序集 `Lin.Runtime.ForEditorTools`（命名空间 `Lin.Runtime.Attribute`）。要标在自己运行时脚本上的工程，其程序集需引用该 asmdef（`autoReferenced: true`，Assembly-CSharp 默认可见）。
+
+### 编辑器助手
+
+`Editor/Helper/` 提供三个纯静态类，命名空间 `Lin.Editor.Helper`：
+
+- `EditorGUIHelper.GetButtonStyle(Color)`：取一个着色按钮 `GUIStyle`（每次调用会新建一张 1×1 纹理，请勿在 `OnGUI` 每帧无节制调用）。
+- `PathHelper`：`GetSelectedPathOrFallback()` 取当前 Project 选中文件夹路径；`FindObject<T>(name, includePackages)` 按类型（可选名字）找 ScriptableObject，找不到抛异常；`GetMonoScript(this Type)`；`RunProcess(path)` 用资源管理器打开路径。
+- `ScriptableObjectHelper.Find<T>(includePackage)`：按类型找 ScriptableObject，找不到抛异常。
+
+### 宏管理
+
+`Lin/Macros` 打开宏管理器：顶部选 `BuildTargetGroup`，中间增删/勾选脚本宏。勾选结果写进该平台的 `PlayerSettings` scripting define symbols，同时在**项目根**落一份 `<平台>-Macros.json` 作为本包的记录（内置宏 `TEST` / `UNITY_2D` 会自动补进列表）。切换平台会立即以当前 define 为准合并列表并回写。
+
+> 包依赖宏（HybridCLR / Luban / YooAsset / UniTask 等）已改由各 asmdef 的 `versionDefines` 随包自动增删，不走本窗口。
+
+### 脚本 TODO 收集
+
+`Lin/脚本/收集TODO`（以及每次脚本重载自动触发）扫描 `Assets/` 下所有 `.cs`，把 `TODO` 注释抽出来生成 `<项目根>/<输出目录名>/Todos.md`（默认目录名 `Markdown`，可在设置页「TODO 收集」段改）。忽略哪些文件夹前缀 / 程序集，同样在该段配置。
+
+> **破坏性变更（相对 Learn 旧版）**：忽略表与输出目录名从宿主 `Assets/Settings/LinEditorSettings.asset` 换到 `ProjectSettings/LinEditorTools.asset`，旧值不搬迁，升级后回默认，需重填。Learn 的 Script Todo 窗口（`Lin/脚本/Script Todo List`）已改为读写同一份包设置。
+
 ### 中英文界面
 
 在设置页右上角点击 **English** 或 **中文**。设置项、注释窗口、包自带工具栏文字和菜单项会切换语言，语言选择保存在本机 `EditorPrefs`，重启 Unity 后仍然保留。菜单会同时显示中英文项，当前语言项可用、另一项置灰。已打开的注释窗口会即时更新文字，正在编辑的注释内容不会被改写。
@@ -208,12 +257,12 @@ public class PlayerController : MonoBehaviour { }
 
 | asmdef 名 | 平台 | 内容 |
 |---|---|---|
-| `Lin.Runtime.Annotation` | 全平台 | `Description`、`NameAttribute`、`ShowInSceneGUIAttribute`、`DrawInSceneGUIAttribute` |
-| `Lin.Editor.Annotation` | 仅编辑器 | SceneView 标注绘制器及其余全部编辑器功能 |
+| `Lin.Runtime.ForEditorTools` | 全平台 | `Description`、`NameAttribute`、`ShowInSceneGUIAttribute`、`DrawInSceneGUIAttribute`、`GetAttribute`、`GetInChildAttribute`、`GetInParentAttribute` |
+| `Lin.Editor.Tools` | 仅编辑器 | SceneView 标注绘制器、Resource / Hierarchy / Toolbar / Inspector、脚本模板与组件自动获取、`Lin.Editor.Helper` 助手及其余全部编辑器功能 |
 
 要在别的程序集里使用本包的类型，需要在该 asmdef 中显式引用对应 asmdef；`autoReferenced` 为 `true`，故 Assembly-CSharp 默认可见。
 
-Scene GUI 两个 Attribute 保留 `Lin.Runtime.Attribute` 命名空间，但现在由 `Lin.Runtime.Annotation` 程序集提供。原本显式依赖框架 `Lin.Runtime` 的自定义 asmdef 需要添加对此 package Runtime asmdef 的引用。
+Scene GUI 两个 Attribute 保留 `Lin.Runtime.Attribute` 命名空间，但现在由 `Lin.Runtime.ForEditorTools` 程序集提供。原本显式依赖框架 `Lin.Runtime` 的自定义 asmdef 需要添加对此 package Runtime asmdef 的引用。（`Get` 系列三个 Attribute 同理：它们从宿主 `Lin.Runtime` 移入本包 Runtime 后，宿主的 `Lin.Runtime` 程序集需引用 `Lin.Runtime.ForEditorTools`。）
 
 ## 改名与兼容性说明
 

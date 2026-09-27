@@ -1,0 +1,16 @@
+/*
+┌────────────────────────────┐
+│　Description: 
+│　Remark: 
+└────────────────────────────┘
+*/
+
+    #ROOTNAMESPACEBEGIN#
+public struct #SCRIPTNAME#
+{
+    public override string ToString()
+    {
+        return default;
+    }
+}
+#ROOTNAMESPACEEND#

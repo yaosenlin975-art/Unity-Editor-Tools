@@ -1,0 +1,30 @@
+/*
+┌────────────────────────────┐
+│　Description: 
+│　Remark: 
+└────────────────────────────┘
+*/
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+    #ROOTNAMESPACEBEGIN#
+public class #SCRIPTNAME# : MonoBehaviour
+{
+    #region - Fields -
+
+    #endregion
+
+    #region - Life Cycle -
+
+    #endregion
+
+    #region - Public Methods -
+
+    #endregion
+
+    #region - Private Methods -
+
+    #endregion
+}
+#ROOTNAMESPACEEND#

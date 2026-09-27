@@ -131,6 +131,15 @@ namespace Lin.Editor.Asset.Importer
             => self != null && ImporterTags.Contains(self.userData, tag);
 
         /// <summary>
+        /// 该导入器上的全部用户标记。返回空表而不是 null —— 调用方一律直接 foreach，
+        /// Learn 的旧实现（ImporterHelper.GetUserTags）在无标记时返回 null，是个潜在空引用。
+        /// </summary>
+        public static List<string> GetUserTags(this AssetImporter self)
+            => self == null
+                ? new List<string>()
+                : ImporterUserData.GetUserData<List<string>>(self, ImporterTags.TagsKey) ?? new List<string>();
+
+        /// <summary>
         /// 写盘前调一次，给一条带 assetPath 的警告。两种丢失形状分开报：
         /// TAGS_KEY 在但读不出（会被当成未标记后覆盖原值）、整串不是 JSON（容器当空档重建）。
         /// 守卫只读：不写 self.userData、不 SaveAndReimport，一次 JObject.Parse 只为判断形状。
