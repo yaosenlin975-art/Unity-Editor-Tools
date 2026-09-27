@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Lin.Runtime.Annotation
+namespace Lin.Runtime
 {
     /// <summary>
     /// 挂在场景物体上的注释数据。构建时由 hideFlags 剥离，故仅编辑器下有序列化字段。

@@ -1,6 +1,6 @@
 using Lin.Editor.Toolbar.Element;
 
-namespace Lin.Editor.Annotation
+namespace Lin.Editor
 {
     [System.AttributeUsage(System.AttributeTargets.Method, AllowMultiple = false)]
     public abstract class ToolbarElementAttribute : System.Attribute

@@ -1,7 +1,7 @@
-using Lin.Editor.Annotation.Settings;
+using Lin.Editor.Settings;
 using System;
 
-namespace Lin.Editor.Annotation.Asset
+namespace Lin.Editor.Asset
 {
     /// <summary>
     /// Project 窗口里一条资源/文件夹注释。titleColor 是不带 # 的 RGB 十六进制串。

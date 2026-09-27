@@ -10,7 +10,7 @@ using InstanceId = UnityEngine.EntityId;
 using InstanceId = System.Int32;
 #endif
 
-namespace Lin.Editor.Annotation.Hierarchy
+namespace Lin.Editor.Hierarchy
 {
     [InitializeOnLoad]
     static class HierarchyDrawer
@@ -97,6 +97,6 @@ namespace Lin.Editor.Annotation.Hierarchy
             }
         }
 
-        private static void Error(string message) => UnityEngine.Debug.LogError($"[Lin Editor Drawer] {message}");
+        private static void Error(string message) => UnityEngine.Debug.LogError($"[Lin Editor Tools] {message}");
     }
 }

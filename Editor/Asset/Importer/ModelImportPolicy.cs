@@ -1,6 +1,6 @@
-using Lin.Editor.Annotation.Settings;   // 形参类型：老计划写的是 AssetImportSettings，那个 SO 已被 M2 并进 AnnotationSettings
+using Lin.Editor.Settings;   // 形参类型：老计划写的是 AssetImportSettings，那个 SO 已被 M2 并进 AnnotationSettings
 
-namespace Lin.Editor.AssetImport
+namespace Lin.Editor.Asset.Importer
 {
     /// <summary>
     /// 模型导入里唯一两条还需要判定的规则。rig 类型（Human/Generic）与 generateSecondaryUV
@@ -10,7 +10,7 @@ namespace Lin.Editor.AssetImport
     {
         public static bool ShouldSeedClips(int existingClipCount) => existingClipCount <= 0;
 
-        internal static bool ShouldLoop(string clipName, AnnotationSettings settings)
+        internal static bool ShouldLoop(string clipName, ToolsSettings_SO settings)
         {
             if (string.IsNullOrEmpty(clipName) || string.IsNullOrEmpty(settings.loopSuffix))
                 return false;

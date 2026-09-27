@@ -1,8 +1,8 @@
 using System;
 using UnityEditor;
-using Lin.Editor.Annotation.Settings;   // 形参类型：老计划写的是 AssetImportSettings，那个 SO 已被 M2 并进 AnnotationSettings
+using Lin.Editor.Settings;   // 形参类型：老计划写的是 AssetImportSettings，那个 SO 已被 M2 并进 AnnotationSettings
 
-namespace Lin.Editor.AssetImport
+namespace Lin.Editor.Asset.Importer
 {
     /// <summary>纹理用途，决定压缩格式档位。</summary>
     public enum TextureUsage
@@ -28,7 +28,7 @@ namespace Lin.Editor.AssetImport
         /// 桌面浏览器拿不到 DXT（见 ADR-006 W1），那边由 TextureImporter.maxTextureSize 管尺寸。
         /// </summary>
         internal static (TextureImporterFormat format, int maxSize) Get(
-            TextureUsage usage, string platform, AnnotationSettings settings, bool hasAlpha = true)
+            TextureUsage usage, string platform, ToolsSettings_SO settings, bool hasAlpha = true)
         {
             bool isPC = platform == settings.pcPlatform;
 

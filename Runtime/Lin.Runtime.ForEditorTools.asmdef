@@ -1,6 +1,6 @@
 {
-    "name": "Lin.Runtime.Annotation",
-    "rootNamespace": "Lin.Runtime.Annotation",
+    "name": "Lin.Runtime.ForEditorTools",
+    "rootNamespace": "Lin.Runtime",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

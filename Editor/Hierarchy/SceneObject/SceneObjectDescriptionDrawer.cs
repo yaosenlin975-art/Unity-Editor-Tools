@@ -1,4 +1,4 @@
-using Lin.Editor.Annotation.Settings;
+using Lin.Editor.Settings;
 using UnityEditor;
 using UnityEngine;
 
@@ -8,7 +8,7 @@ using InstanceId = UnityEngine.EntityId;
 using InstanceId = System.Int32;
 #endif
 
-namespace Lin.Editor.Annotation.Hierarchy.SceneObject
+namespace Lin.Editor.Hierarchy.SceneObject
 {
     /// <summary>把 Description 组件的内容绘制在 Hierarchy 行尾。</summary>
     public class SceneObjectDescriptionDrawer : IHierarchyDrawable

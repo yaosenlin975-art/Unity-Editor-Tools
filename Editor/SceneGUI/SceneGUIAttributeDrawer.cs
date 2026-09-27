@@ -11,12 +11,12 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Lin.Editor.Annotation.Settings;
+using Lin.Editor.Settings;
 using Lin.Runtime.Attribute;
 using UnityEditor;
 using UnityEngine;
 
-namespace Lin.Editor.Annotation.SceneGUI
+namespace Lin.Editor.SceneGUI
 {
     internal static class SceneGUIAttributeDrawer
     {
@@ -297,7 +297,7 @@ namespace Lin.Editor.Annotation.SceneGUI
 
         private static string ReadMemberFailed(string memberName, Exception ex)
         {
-            UnityEngine.Debug.LogError($"[Lin Editor Drawer] 读取 {memberName} 失败: {ex.GetType().Name}: {ex.Message}");
+            UnityEngine.Debug.LogError($"[Lin Editor Tools] 读取 {memberName} 失败: {ex.GetType().Name}: {ex.Message}");
             return "读取失败";
         }
 
@@ -320,7 +320,7 @@ namespace Lin.Editor.Annotation.SceneGUI
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"[Lin Editor Drawer] 调用 {method.Name} 失败: {ex.GetType().Name}: {ex.Message}");
+                UnityEngine.Debug.LogError($"[Lin Editor Tools] 调用 {method.Name} 失败: {ex.GetType().Name}: {ex.Message}");
             }
         }
 

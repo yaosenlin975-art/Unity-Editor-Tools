@@ -1,5 +1,5 @@
 using UnityEditor;
-using Lin.Editor.Annotation.Settings;
+using Lin.Editor.Settings;
 using UnityEngine;
 using UnityEngine.UIElements;
 

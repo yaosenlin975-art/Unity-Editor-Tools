@@ -8,7 +8,7 @@ using System.IO;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 
-namespace Lin.Editor.AssetImport
+namespace Lin.Editor.Asset.Importer
 {
     [ScriptedImporter(1, new[] { "log" })]
     public class LogTextImporter : ScriptedImporter

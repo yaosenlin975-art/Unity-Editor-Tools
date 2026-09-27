@@ -3,22 +3,25 @@ using System.IO;
 using UnityEditorInternal;
 using UnityEngine;
 
-namespace Lin.Editor.Annotation.Settings
+namespace Lin.Editor.Settings
 {
     /// <summary>
     /// 包设置，落在宿主工程 ProjectSettings/ 下、随工程进版本库。
     /// AssetDatabase 看不见这个对象，所以 SetDirty 无效——改动必须显式走 Save()。
-    /// 类名与实际承载范围（注释设置 + 导入策略）暂时不符：合并只改入口名的那一步之后一起处理。
+    /// 类名与实际承载范围（注释设置 + 导入策略 + SceneView 叠加）暂时不符：合并只改入口名的那一步之后一起处理。
     /// </summary>
-    internal class AnnotationSettings : ScriptableObject
+    internal class ToolsSettings_SO : ScriptableObject
     {
-        internal const string FilePath = "ProjectSettings/LinEditorDrawer.asset";
+        internal const string FilePath = "ProjectSettings/LinEditorTools.asset";
 
         /// <summary>v1：只有九项注释设置的那一版，也是对方已经发布出去的那一版。</summary>
         internal const int AnnotationOnlyVersion = 1;
 
         /// <summary>v2：导入策略的十个字段并进同一个 SO。文件路径与类名都不变（用户裁定：入口名不换）。</summary>
-        internal const int CurrentVersion = 2;
+        internal const int ImportMergeVersion = 2;
+
+        /// <summary>v3：SceneView 叠加的两个字段（开关 + 颜色）随 SceneRendererInfoDrawer 从宿主 EditorSettings_SO 移植并级。</summary>
+        internal const int CurrentVersion = 3;
 
         public int settingsVersion;
 
@@ -52,16 +55,24 @@ namespace Lin.Editor.Annotation.Settings
         public string[] voiceKeywords = { "Voice" };
         public string loopSuffix = "_Loop";
 
-        /// <summary>导入策略那一段自己的版本，与被删包里 settingsVersion 的取值一致；SO 整体的版本仍是 settingsVersion。</summary>
-        public int importPolicyVersion = 1;
+        // ----------------- SceneView 叠加（原宿主 EditorSettings_SO 的 drawRendererInfos_SV / infosColor_SV，随 SceneRendererInfoDrawer 移植并级） -----------------
+
+        /// <summary>SceneView 里绘制选中物体包围盒与顶点/面数统计的总开关，默认关。</summary>
+        public bool sceneRendererInfoEnabled;
+
+        /// <summary>叠加的线框与文字颜色；默认取不透明灰——alpha 0 画出来是隐形的，不能当默认。</summary>
+        public Color sceneRendererInfoColor = Color.gray;
+
+        // 版本号只有 settingsVersion 一个（原 importPolicyVersion 已删：第二个版本字段没人读、只会撒谎，
+        // 导入策略那一段的形状由 Migrate 的 v1→v2 级负责）。
 
         // 新建对象先落在 v1：导入策略那一段是本轮才并进同一个 SO 的，由 Migrate 的 v1→v2 级补默认并抬到 CurrentVersion，
         // 于是"老文件升级"和"新工程首建"共用同一条补字段的道路（S1 锁的就是"新实例即 v1"）。
-        private AnnotationSettings() => settingsVersion = AnnotationOnlyVersion;
+        private ToolsSettings_SO() => settingsVersion = AnnotationOnlyVersion;
 
-        private static AnnotationSettings instance;
+        private static ToolsSettings_SO instance;
 
-        internal static AnnotationSettings Instance
+        internal static ToolsSettings_SO Instance
         {
             get
             {
@@ -74,7 +85,7 @@ namespace Lin.Editor.Annotation.Settings
                 {
                     foreach (var obj in loaded)
                     {
-                        if (obj is AnnotationSettings found)
+                        if (obj is ToolsSettings_SO found)
                         {
                             instance = found;
                             break;
@@ -83,21 +94,21 @@ namespace Lin.Editor.Annotation.Settings
                 }
 
                 if (instance == null)
-                    instance = CreateInstance<AnnotationSettings>();
+                    instance = CreateInstance<ToolsSettings_SO>();
 
                 instance.hideFlags = HideFlags.HideAndDontSave;
 
-                // 收敛要在同一次访问里做完：只升一级会把 v0 文件写成"版本号已抬到 v1、导入字段还全是 null/0"的半成品并落盘，
-                // 该窗口内导入回调会去迭代 null 平台表、把 maxTextureSize 赋成 0，要等下一次启动才自愈。
+                // 收敛要在同一次访问里做完：只升一级会把 v0 对象留在"版本号已抬到 v1、导入字段还全是 null/0"的半成品形状，
+                // 该状态下导入回调会去迭代 null 平台表、把 maxTextureSize 赋成 0，要等下一次启动才自愈。
                 // 分级语义留在 Migrate() 内部（一次调用只升一级），逐级调到位是这里的事。
-                var migrated = false;
                 while (instance.settingsVersion < CurrentVersion)
-                {
                     instance.Migrate();
-                    migrated = true;
-                }
 
-                if (migrated || !File.Exists(FilePath))
+                // 读路径不写盘（ADR-001 落盘语义 / ADR-003"装包零副作用"）：Instance 是纯 getter，
+                // 任何一次导入回调（MediaAssetPostprocessor.ShouldHandle）都会读它；关着闸门也不许改宿主的设置文件。
+                // 迁移只在内存里收敛，下一次真实写入（设置页改动、写注释）自然把补齐的形状落盘；
+                // 磁盘上短暂留着旧版本号是无害的。唯一还要在这里落盘的场景是文件根本不存在。
+                if (!File.Exists(FilePath))
                     Save();
 
                 return instance;
@@ -108,15 +119,24 @@ namespace Lin.Editor.Annotation.Settings
 
         internal bool IsWebPlatform(string platform) => Contains(followBuildDefaultPlatforms, platform);
 
-        internal IEnumerable<string> AllPlatforms
+        /// <summary>
+        /// 覆盖组的空安全视图：数组为 null（老文件缺字段、或 `settingsVersion` 高于 CurrentVersion 而没被 Migrate 补过）
+        /// 就给空序列，串为空/空的元素一律跳过 —— 平台名空着传给 importer API 是一次静默的错配置。
+        /// 生产侧的三处循环（纹理/音频/图集）与音频跟随组的载体选择都读这两个访问器，不再 foreach 裸数组。
+        /// </summary>
+        internal IEnumerable<string> OverriddenPlatformNames => Named(overriddenPlatforms);
+
+        /// <summary>跟随构建组的空安全视图，语义同 <see cref="OverriddenPlatformNames"/>。</summary>
+        internal IEnumerable<string> FollowBuildDefaultPlatformNames => Named(followBuildDefaultPlatforms);
+
+        private static IEnumerable<string> Named(string[] list)
         {
-            get
-            {
-                foreach (var p in overriddenPlatforms ?? new string[0])
-                    if (!string.IsNullOrEmpty(p)) yield return p;
-                foreach (var p in followBuildDefaultPlatforms ?? new string[0])
-                    if (!string.IsNullOrEmpty(p)) yield return p;
-            }
+            if (list == null)
+                yield break;
+
+            for (int i = 0; i < list.Length; i++)
+                if (!string.IsNullOrEmpty(list[i]))
+                    yield return list[i];
         }
 
         private static bool Contains(string[] list, string platform)
@@ -139,10 +159,13 @@ namespace Lin.Editor.Annotation.Settings
         ///
         /// v1 → v2：这一级多出来的只有导入策略那十个字段，而 v1 里的九项注释设置全是用户真调过的值。
         /// 再走一次整份回默认就会把它们静默抹掉，所以这一级只补新字段（null/0/空 → 各自默认）。
+        ///
+        /// v2 → v3：SceneView 叠加两个字段（sceneRendererInfoEnabled / sceneRendererInfoColor）随绘制器移植并级，
+        /// 同样只补新字段。开关默认关等于不动；颜色以 alpha 0 为"未设置"判据补默认（不透明灰），真调过的颜色原样保留。
         /// </summary>
         internal void Migrate()
         {
-            var fresh = CreateInstance<AnnotationSettings>();
+            var fresh = CreateInstance<ToolsSettings_SO>();
 
             if (settingsVersion < AnnotationOnlyVersion)
             {
@@ -162,19 +185,27 @@ namespace Lin.Editor.Annotation.Settings
             if (settingsVersion >= CurrentVersion)
                 return;
 
-            // enabled / videoEnabled 不碰：两个开关的默认本就是 false，回默认等于不动
-            if (overriddenPlatforms == null || overriddenPlatforms.Length == 0)
-                overriddenPlatforms = fresh.overriddenPlatforms;
-            if (followBuildDefaultPlatforms == null || followBuildDefaultPlatforms.Length == 0)
-                followBuildDefaultPlatforms = fresh.followBuildDefaultPlatforms;
-            if (bgmKeywords == null || bgmKeywords.Length == 0)
-                bgmKeywords = fresh.bgmKeywords;
-            if (voiceKeywords == null || voiceKeywords.Length == 0)
-                voiceKeywords = fresh.voiceKeywords;
-            globalMaxTextureSize = globalMaxTextureSize > 0 ? globalMaxTextureSize : fresh.globalMaxTextureSize;
-            pcPlatform = string.IsNullOrEmpty(pcPlatform) ? fresh.pcPlatform : pcPlatform;
-            loopSuffix = string.IsNullOrEmpty(loopSuffix) ? fresh.loopSuffix : loopSuffix;
-            importPolicyVersion = importPolicyVersion > 0 ? importPolicyVersion : fresh.importPolicyVersion;
+            if (settingsVersion < ImportMergeVersion)
+            {
+                // enabled / videoEnabled 不碰：两个开关的默认本就是 false，回默认等于不动
+                if (overriddenPlatforms == null || overriddenPlatforms.Length == 0)
+                    overriddenPlatforms = fresh.overriddenPlatforms;
+                if (followBuildDefaultPlatforms == null || followBuildDefaultPlatforms.Length == 0)
+                    followBuildDefaultPlatforms = fresh.followBuildDefaultPlatforms;
+                if (bgmKeywords == null || bgmKeywords.Length == 0)
+                    bgmKeywords = fresh.bgmKeywords;
+                if (voiceKeywords == null || voiceKeywords.Length == 0)
+                    voiceKeywords = fresh.voiceKeywords;
+                globalMaxTextureSize = globalMaxTextureSize > 0 ? globalMaxTextureSize : fresh.globalMaxTextureSize;
+                pcPlatform = string.IsNullOrEmpty(pcPlatform) ? fresh.pcPlatform : pcPlatform;
+                loopSuffix = string.IsNullOrEmpty(loopSuffix) ? fresh.loopSuffix : loopSuffix;
+
+                settingsVersion = ImportMergeVersion;
+                return;
+            }
+
+            // v2 → v3：sceneRendererInfoEnabled 不碰（默认关即不动）
+            sceneRendererInfoColor = sceneRendererInfoColor.a > 0f ? sceneRendererInfoColor : fresh.sceneRendererInfoColor;
 
             settingsVersion = CurrentVersion;
         }

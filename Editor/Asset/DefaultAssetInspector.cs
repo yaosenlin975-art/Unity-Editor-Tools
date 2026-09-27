@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.Pool;
 using Object = UnityEngine.Object;
 
-namespace Lin.Editor.Annotation.Asset
+namespace Lin.Editor.Asset
 {
     /// <summary>
     /// DefaultAsset（文件夹与没有专用导入器的资产）的 Inspector：头部显示注释与自定义链接，

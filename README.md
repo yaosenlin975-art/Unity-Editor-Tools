@@ -1,19 +1,19 @@
 [简体中文](README.md) | [English](README_EN.md)
 
-# Lin Editor Drawer
+# Lin Editor Tools
 
 面向 Unity 工作流的轻量编辑器工具集，覆盖 Project、Hierarchy、SceneView、Inspector 和主工具栏。外部只依赖 `com.unity.nuget.newtonsoft-json`（`userData` 容器要用它做 JSON 树解析），设置页及包自带界面支持中英文切换。
 
-> Package Manager 展示名：**Lin Editor Drawer**。包 ID 与目录均为 `com.lin.editor-drawer`。
+> Package Manager 展示名：**Lin Editor Tools**。包 ID 与目录均为 `com.lin.editor-tools`。
 
 ## 安装
 
-**内嵌**：把 `com.lin.editor-drawer` 整个目录放进目标工程的 `Packages/`，Unity 自动识别。
+**内嵌**：把 `com.lin.editor-tools` 整个目录放进目标工程的 `Packages/`，Unity 自动识别。
 
 **外部引用**：`Packages/manifest.json` 里加一条
 
 ```json
-"com.lin.editor-drawer": "file:<路径>/com.lin.editor-drawer"
+"com.lin.editor-tools": "file:<路径>/com.lin.editor-tools"
 ```
 
 或在 Package Manager 里 *Add package from git URL / disk*。
@@ -118,9 +118,9 @@ public class SceneViewHints : MonoBehaviour
 
 ### 配置页
 
-**Project Settings → Lin Editor Drawer**，三段：资源注释、场景物体注释、脚本注释。字号限定 8–32；改动会自动重绘 Project 窗口。
+**Project Settings → Lin Editor Tools**，三段：资源注释、场景物体注释、脚本注释。字号限定 8–32；改动会自动重绘 Project 窗口。
 
-9 个注释显示设置存在宿主的 `ProjectSettings/LinEditorDrawer.asset`（本包首次读到就自动生成，文本序列化、可 diff、进版本库、团队共享）。界面语言与主工具栏开关态是**本机本用户**偏好，仍存 `EditorPrefs`（key 前缀 `com.lin.editor-annotation/`），不进版本库——否则一个人切英文会替全组切。
+9 个注释显示设置存在宿主的 `ProjectSettings/LinEditorTools.asset`（本包首次读到就自动生成，文本序列化、可 diff、进版本库、团队共享）。界面语言与主工具栏开关态是**本机本用户**偏好，仍存 `EditorPrefs`（key 前缀 `com.lin.editor-annotation/`），不进版本库——否则一个人切英文会替全组切。
 
 升级注意：从 `EditorPrefs` 迁来的这 9 项**不做搬迁**，装了新版会看到默认值；同一份 `.asset` 以后新增字段时，老工程里缺的字段会被反序列化成 0/空而非默认值，包用 `settingsVersion` + `Migrate()` 归位。
 
@@ -218,6 +218,8 @@ Scene GUI 两个 Attribute 保留 `Lin.Runtime.Attribute` 命名空间，但现�
 ## 改名与兼容性说明
 
 本次将包 ID 从 `com.lin.editor-annotation` 改为 `com.lin.editor-drawer`。安装路径或 manifest 使用旧 ID 的工程需要改用新 ID。为保留现有代码，C# 命名空间 `Lin.Editor.Annotation.*`、程序集名 `Lin.Editor.Annotation` / `Lin.Runtime.Annotation`、EditorPrefs 前缀 `com.lin.editor-annotation/` 均继续沿用旧标识。注释数据文件 `ProjectSettings/LinEditorAnnotation.json` 是例外：它自 Unreleased 起停用（见上文，不迁移）。
+
+2026-09-27 起包 ID 再次更名为 `com.lin.editor-tools`（drawer 从未发版，两跳并作一跳）：使用 annotation 或 drawer 旧 ID 的工程统一改用新 ID。命名空间、程序集名与 EditorPrefs 前缀的兼容承诺不变；包设置文件为 `ProjectSettings/LinEditorTools.asset`。
 
 ## Unity 版本兼容性
 

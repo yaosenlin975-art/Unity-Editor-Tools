@@ -1,4 +1,4 @@
-namespace Lin.Editor.Annotation
+namespace Lin.Editor
 {
     /// <summary>Hierarchy 行内注释的点击编辑方式。</summary>
     public enum EClickType

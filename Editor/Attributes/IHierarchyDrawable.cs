@@ -7,7 +7,7 @@ using InstanceId = UnityEngine.EntityId;
 using InstanceId = System.Int32;
 #endif
 
-namespace Lin.Editor.Annotation
+namespace Lin.Editor
 {
     /// <summary>
     /// 实现此接口的类会被 HierarchyDrawer 自动发现并绘制在 Hierarchy 行内。

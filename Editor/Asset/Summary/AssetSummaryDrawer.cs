@@ -1,10 +1,10 @@
-using Lin.Editor.Annotation.Settings;
+using Lin.Editor.Settings;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace Lin.Editor.Annotation.Asset
+namespace Lin.Editor.Asset
 {
     /// <summary>
     /// 在 Project 窗口绘制资源/文件夹注释；.cs 文件额外从源码头部注释里提取一行作为脚本注释。

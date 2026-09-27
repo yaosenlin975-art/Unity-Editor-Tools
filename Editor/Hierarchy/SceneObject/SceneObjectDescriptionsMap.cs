@@ -1,4 +1,4 @@
-using Lin.Runtime.Annotation;
+using Lin.Runtime;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -10,7 +10,7 @@ using InstanceId = UnityEngine.EntityId;
 using InstanceId = System.Int32;
 #endif
 
-namespace Lin.Editor.Annotation.Hierarchy.SceneObject
+namespace Lin.Editor.Hierarchy.SceneObject
 {
     /// <summary>
     /// 注释的内存缓存，真值存在场景物体的 Description 组件上。切场景即清空，故注释是 per-scene 的。

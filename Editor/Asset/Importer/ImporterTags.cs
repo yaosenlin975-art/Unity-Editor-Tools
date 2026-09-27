@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;   // 只给下面那条只读守卫用（见 HasNonJsonUserData 的注释），编解码仍只在容器里
 using UnityEditor;
-using Lin.Editor.Annotation.Asset;
+using Lin.Editor.Asset;
 
-namespace Lin.Editor.AssetImport
+namespace Lin.Editor.Asset.Importer
 {
     /// <summary>
     /// 导入策略用的用户标记。容器是 ImporterUserData（同一个 .meta 上还住着 lin.annotation），

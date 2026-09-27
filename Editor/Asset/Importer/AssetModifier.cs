@@ -1,12 +1,13 @@
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.U2D;
 using UnityEngine;
 using UnityEngine.U2D;
 using UnityEngine.Video;
-using Lin.Editor.Annotation.Settings;   // 策略来源：老计划写的是 AssetImportSettings，那个 SO 已被 M2 并进 AnnotationSettings
+using Lin.Editor.Settings;   // 策略来源：老计划写的是 AssetImportSettings，那个 SO 已被 M2 并进 AnnotationSettings
 
-namespace Lin.Editor.AssetImport
+namespace Lin.Editor.Asset.Importer
 {
     /// <summary>按 AnnotationSettings 把导入设置写到 importer 上。</summary>
     public static class AssetModifier
@@ -24,10 +25,10 @@ namespace Lin.Editor.AssetImport
         // [W1 of ADR-003] enabled 为 false 时灰化。2021.3 没有 4 参 MenuItem 重载，
         // 校验函数用 MenuItem(path, true) 标在另一个静态方法上（docs 已核实）。
         [MenuItem("Assets/优化资源设置", true)]
-        private static bool ValidatePostprocess() => AnnotationSettings.Instance.enabled;
+        private static bool ValidatePostprocess() => ToolsSettings_SO.Instance.enabled;
 
         [MenuItem("Assets/优化资源设置(强制)", true)]
-        private static bool ValidatePostprocessForce() => AnnotationSettings.Instance.enabled;
+        private static bool ValidatePostprocessForce() => ToolsSettings_SO.Instance.enabled;
 
         private static void Run(bool force)
         {
@@ -105,6 +106,25 @@ namespace Lin.Editor.AssetImport
 
         #endregion
 
+        #region - 平台可用性 -
+
+        /// <summary>
+        /// 覆盖组平台名逐个过 IsPlatformAvailable：当前编辑器不支持的 Warn 后跳过，可用的才交给下游写 importer。
+        /// 纹理与音频两处共用这一处判断（原先是两份内联 if）；skipMessage 由调用方拼好资产路径，这里只补平台名。
+        /// </summary>
+        private static IEnumerable<string> Available(IEnumerable<string> platformNames, string skipMessage, Object context)
+        {
+            foreach (var platform in platformNames)
+            {
+                if (PlatformTextureFormat.IsPlatformAvailable(platform))
+                    yield return platform;
+                else
+                    Warn($"当前编辑器不支持平台 {platform}, {skipMessage}", context);
+            }
+        }
+
+        #endregion
+
         #region - 纹理 -
 
         /// <summary>
@@ -116,7 +136,7 @@ namespace Lin.Editor.AssetImport
             if (importer == null || importer.ContainsUserTag(ModifiedTag))
                 return;
 
-            var settings = AnnotationSettings.Instance;
+            var settings = ToolsSettings_SO.Instance;
             TextureUsage usage;
 
             switch (importer.textureType)
@@ -126,6 +146,7 @@ namespace Lin.Editor.AssetImport
                     usage = TextureUsage.UI;
                     importer.mipmapEnabled = false;
                     break;
+
                 case TextureImporterType.NormalMap:
                     usage = TextureUsage.NormalMap;
                     importer.mipmapEnabled = true;
@@ -133,16 +154,19 @@ namespace Lin.Editor.AssetImport
                     importer.streamingMipmaps = false; // 法线图流送是误配
                     importer.sRGBTexture = false;
                     break;
+
                 case TextureImporterType.Lightmap:
                     usage = TextureUsage.Lightmap;
                     importer.mipmapEnabled = false;
                     importer.sRGBTexture = true;
                     break;
+
                 case TextureImporterType.Default:
                     usage = TextureUsage.Default;
                     importer.mipmapEnabled = true;
                     importer.streamingMipmaps = true;
                     break;
+
                 default:
                     return; // 不认识的类型不打 tag，策略升级后还能再处理
             }
@@ -150,14 +174,8 @@ namespace Lin.Editor.AssetImport
             importer.isReadable = false;
 
             // [W1] 只有覆盖组建平台覆盖；跟随组的尺寸走下面的全局上限
-            foreach (var platform in settings.overriddenPlatforms)
+            foreach (var platform in Available(settings.OverriddenPlatformNames, $"跳过 {importer.assetPath}", importer))
             {
-                if (!PlatformTextureFormat.IsPlatformAvailable(platform))
-                {
-                    Warn($"当前编辑器不支持平台 {platform}, 跳过 {importer.assetPath}", importer);
-                    continue;
-                }
-
                 var (format, maxSize) = PlatformTextureFormat.Get(
                     usage, platform, settings, importer.DoesSourceTextureHaveAlpha());
                 importer.SetPlatformTextureSettings(new TextureImporterPlatformSettings
@@ -194,20 +212,14 @@ namespace Lin.Editor.AssetImport
             if (importer == null || importer.ContainsUserTag(ModifiedTag))
                 return;
 
-            var settings = AnnotationSettings.Instance;
+            var settings = ToolsSettings_SO.Instance;
             var role = AudioImportPolicy.Classify(importer.assetPath, settings);
 
             // [W4] 覆盖组：SetOverrideSampleSettings 只对这三个名字落 platformSettingOverrides 行（实测键 1/4/7）。
             // 注意可用性判据挡不住 WebGL：它在 BuildTargetGroup 里是定义的（且模块已装），
             // 但对音频它照样不落盘 —— 承载 API 由分组决定，不由 IsPlatformAvailable 决定。
-            foreach (var platform in settings.overriddenPlatforms)
+            foreach (var platform in Available(settings.OverriddenPlatformNames, $"跳过 {importer.assetPath}", importer))
             {
-                if (!PlatformTextureFormat.IsPlatformAvailable(platform))
-                {
-                    Warn($"当前编辑器不支持平台 {platform}, 跳过 {importer.assetPath}", importer);
-                    continue;
-                }
-
                 var d = AudioImportPolicy.Resolve(role, platform, settings);
                 importer.SetOverrideSampleSettings(platform, new AudioImporterSampleSettings
                 {
@@ -271,7 +283,7 @@ namespace Lin.Editor.AssetImport
             if (importer == null)
                 return;
 
-            var settings = AnnotationSettings.Instance;
+            var settings = ToolsSettings_SO.Instance;
             if (!settings.enabled)
                 return;
 
@@ -298,7 +310,7 @@ namespace Lin.Editor.AssetImport
             if (atlas == null)
                 return;
 
-            var settings = AnnotationSettings.Instance;
+            var settings = ToolsSettings_SO.Instance;
             bool changed = false;
 
             foreach (var platform in settings.overriddenPlatforms)
@@ -343,7 +355,7 @@ namespace Lin.Editor.AssetImport
                 return;
 
             // [W6] videoEnabled 与 enabled 互不隶属
-            if (!AnnotationSettings.Instance.videoEnabled || importer.ContainsUserTag(ModifiedTag))
+            if (!ToolsSettings_SO.Instance.videoEnabled || importer.ContainsUserTag(ModifiedTag))
                 return;
 
             // 读-改-写：直接 new 会重置已有设置，导致 resizeMode 静默失效

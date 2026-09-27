@@ -1,5 +1,5 @@
-using Lin.Editor.Annotation;
-using Lin.Editor.Annotation.Settings;
+using Lin.Editor;
+using Lin.Editor.Settings;
 using Lin.Editor.Toolbar.Element;
 using System;
 using System.Collections.Generic;
@@ -49,7 +49,7 @@ namespace Lin.Editor.Toolbar
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"[Lin Editor Drawer] 构建工具栏元素失败: {ex.GetType().Name}: {ex.Message}");
+                UnityEngine.Debug.LogError($"[Lin Editor Tools] 构建工具栏元素失败: {ex.GetType().Name}: {ex.Message}");
             }
 
             EditorApplication.update -= OnUpdate;

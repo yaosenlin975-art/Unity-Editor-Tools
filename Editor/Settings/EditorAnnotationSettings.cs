@@ -4,17 +4,17 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Lin.Editor.Annotation.Settings
+namespace Lin.Editor.Settings
 {
     /// <summary>
-    /// 本包的设置门面。9 个注释显示设置存在 <see cref="AnnotationSettings"/>（宿主工程 ProjectSettings/ 下的
+    /// 本包的设置门面。9 个注释显示设置存在 <see cref="ToolsSettings_SO"/>（宿主工程 ProjectSettings/ 下的
     /// SO，随工程进版本库）；界面语言与主工具栏开关态是本机本用户偏好，仍存 EditorPrefs。
     /// 属性名与签名保持不变，调用点无需感知后端换过。
     /// </summary>
     public static class EditorAnnotationSettings
     {
         /// <summary>包内资产的加载路径前缀，与目录名绑定。</summary>
-        public const string PackagePath = "Packages/com.lin.editor-drawer";
+        public const string PackagePath = "Packages/com.lin.editor-tools";
 
         /// <summary>两个注释窗口共用的样式表（两份原文件逐字节相同，故合一份）。</summary>
         public const string WindowStyleSheetPath = PackagePath + "/Editor/UI/AnnotationWindow.uss";
@@ -37,55 +37,55 @@ namespace Lin.Editor.Annotation.Settings
 
         public static int AssetSummaryTitleSize
         {
-            get => AnnotationSettings.Instance.assetSummaryTitleSize;
-            set { AnnotationSettings.Instance.assetSummaryTitleSize = value; AnnotationSettings.Save(); }
+            get => ToolsSettings_SO.Instance.assetSummaryTitleSize;
+            set { ToolsSettings_SO.Instance.assetSummaryTitleSize = value; ToolsSettings_SO.Save(); }
         }
 
         public static EClickType AssetSummaryEditWay
         {
-            get => AnnotationSettings.Instance.assetSummaryEditWay;
-            set { AnnotationSettings.Instance.assetSummaryEditWay = value; AnnotationSettings.Save(); }
+            get => ToolsSettings_SO.Instance.assetSummaryEditWay;
+            set { ToolsSettings_SO.Instance.assetSummaryEditWay = value; ToolsSettings_SO.Save(); }
         }
 
         // ----------------- Hierarchy 场景物体注释 -----------------
 
         public static int SceneObjectDescriptionTitleSize
         {
-            get => AnnotationSettings.Instance.sceneObjectDescriptionTitleSize;
-            set { AnnotationSettings.Instance.sceneObjectDescriptionTitleSize = value; AnnotationSettings.Save(); }
+            get => ToolsSettings_SO.Instance.sceneObjectDescriptionTitleSize;
+            set { ToolsSettings_SO.Instance.sceneObjectDescriptionTitleSize = value; ToolsSettings_SO.Save(); }
         }
 
         public static EClickType SceneObjectDescriptionEditWay
         {
-            get => AnnotationSettings.Instance.sceneObjectDescriptionEditWay;
-            set { AnnotationSettings.Instance.sceneObjectDescriptionEditWay = value; AnnotationSettings.Save(); }
+            get => ToolsSettings_SO.Instance.sceneObjectDescriptionEditWay;
+            set { ToolsSettings_SO.Instance.sceneObjectDescriptionEditWay = value; ToolsSettings_SO.Save(); }
         }
 
         // ----------------- 脚本注释（从 .cs 源码头部注释里提取） -----------------
 
         public static Color ScriptDescriptionColor
         {
-            get => AnnotationSettings.Instance.scriptDescriptionColor;
-            set { AnnotationSettings.Instance.scriptDescriptionColor = value; AnnotationSettings.Save(); }
+            get => ToolsSettings_SO.Instance.scriptDescriptionColor;
+            set { ToolsSettings_SO.Instance.scriptDescriptionColor = value; ToolsSettings_SO.Save(); }
         }
 
         public static bool ScriptDescriptionBold
         {
-            get => AnnotationSettings.Instance.scriptDescriptionBold;
-            set { AnnotationSettings.Instance.scriptDescriptionBold = value; AnnotationSettings.Save(); }
+            get => ToolsSettings_SO.Instance.scriptDescriptionBold;
+            set { ToolsSettings_SO.Instance.scriptDescriptionBold = value; ToolsSettings_SO.Save(); }
         }
 
         public static bool ScriptDescriptionItalic
         {
-            get => AnnotationSettings.Instance.scriptDescriptionItalic;
-            set { AnnotationSettings.Instance.scriptDescriptionItalic = value; AnnotationSettings.Save(); }
+            get => ToolsSettings_SO.Instance.scriptDescriptionItalic;
+            set { ToolsSettings_SO.Instance.scriptDescriptionItalic = value; ToolsSettings_SO.Save(); }
         }
 
         /// <summary>描述标识的原始存储：换行分隔，一行一个。</summary>
         public static string DescriptionFiltersText
         {
-            get => AnnotationSettings.Instance.descriptionFiltersText;
-            set { AnnotationSettings.Instance.descriptionFiltersText = value; AnnotationSettings.Save(); }
+            get => ToolsSettings_SO.Instance.descriptionFiltersText;
+            set { ToolsSettings_SO.Instance.descriptionFiltersText = value; ToolsSettings_SO.Save(); }
         }
 
         /// <summary>
@@ -110,8 +110,8 @@ namespace Lin.Editor.Annotation.Settings
         /// </summary>
         public static int ScriptDescriptionScanMaxLines
         {
-            get => Mathf.Max(1, AnnotationSettings.Instance.scriptDescriptionScanMaxLines);
-            set { AnnotationSettings.Instance.scriptDescriptionScanMaxLines = Mathf.Max(1, value); AnnotationSettings.Save(); }
+            get => Mathf.Max(1, ToolsSettings_SO.Instance.scriptDescriptionScanMaxLines);
+            set { ToolsSettings_SO.Instance.scriptDescriptionScanMaxLines = Mathf.Max(1, value); ToolsSettings_SO.Save(); }
         }
 
         /// <summary>

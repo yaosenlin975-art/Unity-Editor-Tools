@@ -1,4 +1,4 @@
-using Lin.Editor.Annotation.Settings;
+using Lin.Editor.Settings;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -10,7 +10,7 @@ using InstanceId = UnityEngine.EntityId;
 using InstanceId = System.Int32;
 #endif
 
-namespace Lin.Editor.Annotation.Hierarchy.SceneObject
+namespace Lin.Editor.Hierarchy.SceneObject
 {
     public class SceneObjectDescriptionWindow : EditorWindow
     {
@@ -58,7 +58,7 @@ namespace Lin.Editor.Annotation.Hierarchy.SceneObject
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{AssetFolder}/SceneObjectDescriptionWindow.uxml");
             if (visualTree == null)
             {
-                Debug.LogError($"[Lin Editor Drawer] 找不到界面定义 {AssetFolder}/SceneObjectDescriptionWindow.uxml");
+                Debug.LogError($"[Lin Editor Tools] 找不到界面定义 {AssetFolder}/SceneObjectDescriptionWindow.uxml");
                 return;
             }
 

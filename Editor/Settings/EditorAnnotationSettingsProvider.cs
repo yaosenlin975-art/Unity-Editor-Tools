@@ -1,20 +1,20 @@
-using Lin.Editor.Annotation.Asset;
+using Lin.Editor.Asset;
 using Lin.Editor.Toolbar.Element;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Lin.Editor.Annotation.Settings
+namespace Lin.Editor.Settings
 {
     /// <summary>
-    /// Project Settings 里的注释配置页，分资源注释 / 场景物体注释 / 脚本注释三段。
-    /// 原先这些值住在项目私有的 EditorSettings_SO 上，整页搬过来会把 Learn 的框架配置一起带进包，
-    /// 所以只保留与注释有关的三段。
+    /// Project Settings 里的包配置页，分资源注释 / 场景物体注释 / 脚本注释 / 描述标识 / 导入策略 / SceneView 叠加六段。
+    /// 原先注释三段住在项目私有的 EditorSettings_SO 上，整页搬过来会把 Learn 的框架配置一起带进包，
+    /// 所以只保留与注释有关的三段；导入策略与 SceneView 叠加是后续并级进来的。
     /// </summary>
     internal static class EditorAnnotationSettingsProvider
     {
-        public const string PagePath = "Project/Lin Editor Drawer";
+        public const string PagePath = "Project/Lin Editor Tools";
         private static SettingsProvider provider;
         private static GUIStyle sizePreviewStyle;
 
@@ -32,7 +32,7 @@ namespace Lin.Editor.Annotation.Settings
             return provider;
         }
 
-        [MenuItem("Lin/Editor Drawer - 编辑器绘制/Annotation Settings - 设置界面")]
+        [MenuItem("Lin/Editor Tools - 编辑器工具/Annotation Settings - 设置界面")]
         private static void OpenFromMenu() => OpenSettings();
 
         private static void OpenSettings() => SettingsService.OpenProjectSettings(PagePath);
@@ -84,6 +84,7 @@ namespace Lin.Editor.Annotation.Settings
             changed |= DescriptionMarkersList();
 
             ImportPolicySection();
+            SceneViewOverlaySection();
 
             // Project 窗口的绘制结果带缓存，样式或标识变了要重扫；Hierarchy 每帧现读，不需要
             if (changed)
@@ -91,42 +92,61 @@ namespace Lin.Editor.Annotation.Settings
         }
 
         /// <summary>
-        /// 导入策略段：字段从 com.lin.editor-asset-import 并进同一个 SO，仍住 ProjectSettings/LinEditorDrawer.asset。
+        /// 导入策略段：字段从 com.lin.editor-asset-import 并进同一个 SO，仍住 ProjectSettings/LinEditorTools.asset。
         /// 这一段改动只影响导入器、不影响 Project 窗口的绘制，所以不进上面的 changed；
         /// 但 AssetDatabase 看不见这个对象，写完必须立刻 Save()。
         /// </summary>
         private static void ImportPolicySection()
         {
-            var settings = AnnotationSettings.Instance;
+            var settings = ToolsSettings_SO.Instance;
             bool changed = false;
 
             Section(EditorAnnotationLocalization.Text(EAnnotationText.ImportSection));
-            changed |= BoolField(nameof(AnnotationSettings.enabled), EditorAnnotationLocalization.Text(EAnnotationText.ImportEnabled),
+            changed |= BoolField(nameof(ToolsSettings_SO.enabled), EditorAnnotationLocalization.Text(EAnnotationText.ImportEnabled),
                 settings.enabled, v => settings.enabled = v, EditorAnnotationLocalization.Text(EAnnotationText.ImportEnabledTooltip));
-            changed |= BoolField(nameof(AnnotationSettings.videoEnabled), EditorAnnotationLocalization.Text(EAnnotationText.ImportVideoEnabled),
+            changed |= BoolField(nameof(ToolsSettings_SO.videoEnabled), EditorAnnotationLocalization.Text(EAnnotationText.ImportVideoEnabled),
                 settings.videoEnabled, v => settings.videoEnabled = v, EditorAnnotationLocalization.Text(EAnnotationText.ImportVideoEnabledTooltip));
 
             Section(EditorAnnotationLocalization.Text(EAnnotationText.PlatformSection));
-            changed |= StringListField(nameof(AnnotationSettings.overriddenPlatforms), EditorAnnotationLocalization.Text(EAnnotationText.OverriddenPlatforms),
+            changed |= StringListField(nameof(ToolsSettings_SO.overriddenPlatforms), EditorAnnotationLocalization.Text(EAnnotationText.OverriddenPlatforms),
                 settings.overriddenPlatforms, v => settings.overriddenPlatforms = v, EditorAnnotationLocalization.Text(EAnnotationText.OverriddenPlatformsTooltip));
-            changed |= StringListField(nameof(AnnotationSettings.followBuildDefaultPlatforms), EditorAnnotationLocalization.Text(EAnnotationText.FollowBuildDefaultPlatforms),
+            changed |= StringListField(nameof(ToolsSettings_SO.followBuildDefaultPlatforms), EditorAnnotationLocalization.Text(EAnnotationText.FollowBuildDefaultPlatforms),
                 settings.followBuildDefaultPlatforms, v => settings.followBuildDefaultPlatforms = v,
                 EditorAnnotationLocalization.Text(EAnnotationText.FollowBuildDefaultPlatformsTooltip));
-            changed |= IntField(nameof(AnnotationSettings.globalMaxTextureSize), EditorAnnotationLocalization.Text(EAnnotationText.GlobalMaxTextureSize),
+            changed |= IntField(nameof(ToolsSettings_SO.globalMaxTextureSize), EditorAnnotationLocalization.Text(EAnnotationText.GlobalMaxTextureSize),
                 settings.globalMaxTextureSize, v => settings.globalMaxTextureSize = v, EditorAnnotationLocalization.Text(EAnnotationText.GlobalMaxTextureSizeTooltip));
-            changed |= StringField(nameof(AnnotationSettings.pcPlatform), EditorAnnotationLocalization.Text(EAnnotationText.PcPlatform),
+            changed |= StringField(nameof(ToolsSettings_SO.pcPlatform), EditorAnnotationLocalization.Text(EAnnotationText.PcPlatform),
                 settings.pcPlatform, v => settings.pcPlatform = v);
 
             Section(EditorAnnotationLocalization.Text(EAnnotationText.NamingSection));
-            changed |= StringListField(nameof(AnnotationSettings.bgmKeywords), EditorAnnotationLocalization.Text(EAnnotationText.BgmKeywords),
+            changed |= StringListField(nameof(ToolsSettings_SO.bgmKeywords), EditorAnnotationLocalization.Text(EAnnotationText.BgmKeywords),
                 settings.bgmKeywords, v => settings.bgmKeywords = v);
-            changed |= StringListField(nameof(AnnotationSettings.voiceKeywords), EditorAnnotationLocalization.Text(EAnnotationText.VoiceKeywords),
+            changed |= StringListField(nameof(ToolsSettings_SO.voiceKeywords), EditorAnnotationLocalization.Text(EAnnotationText.VoiceKeywords),
                 settings.voiceKeywords, v => settings.voiceKeywords = v);
-            changed |= StringField(nameof(AnnotationSettings.loopSuffix), EditorAnnotationLocalization.Text(EAnnotationText.LoopSuffix),
+            changed |= StringField(nameof(ToolsSettings_SO.loopSuffix), EditorAnnotationLocalization.Text(EAnnotationText.LoopSuffix),
                 settings.loopSuffix, v => settings.loopSuffix = v, EditorAnnotationLocalization.Text(EAnnotationText.LoopSuffixTooltip));
 
             if (changed)
-                AnnotationSettings.Save();
+                ToolsSettings_SO.Save();
+        }
+
+        /// <summary>
+        /// SceneView 叠加段：SceneRendererInfoDrawer 的开关与颜色，随绘制器从宿主 EditorSettings_SO 移植而来。
+        /// 与导入策略段同理：改动不进外层 changed（不影响 Project 窗口绘制），但必须立刻 Save()。
+        /// </summary>
+        private static void SceneViewOverlaySection()
+        {
+            var settings = ToolsSettings_SO.Instance;
+            bool changed = false;
+
+            Section(EditorAnnotationLocalization.Text(EAnnotationText.SceneViewSection));
+            changed |= BoolField(nameof(ToolsSettings_SO.sceneRendererInfoEnabled), EditorAnnotationLocalization.Text(EAnnotationText.RendererInfoEnabled),
+                settings.sceneRendererInfoEnabled, v => settings.sceneRendererInfoEnabled = v, EditorAnnotationLocalization.Text(EAnnotationText.RendererInfoEnabledTooltip));
+            changed |= ColorField(nameof(ToolsSettings_SO.sceneRendererInfoColor), EditorAnnotationLocalization.Text(EAnnotationText.RendererInfoColor),
+                settings.sceneRendererInfoColor, v => settings.sceneRendererInfoColor = v);
+
+            if (changed)
+                ToolsSettings_SO.Save();
         }
 
         private static void Section(string title)
@@ -355,7 +375,11 @@ namespace Lin.Editor.Annotation.Settings
         VoiceKeywords,
         LoopSuffix,
         LoopSuffixTooltip,
-        AddItem
+        AddItem,
+        SceneViewSection,
+        RendererInfoEnabled,
+        RendererInfoEnabledTooltip,
+        RendererInfoColor
     }
 
     internal static class EditorAnnotationLocalization
@@ -363,7 +387,7 @@ namespace Lin.Editor.Annotation.Settings
         private static readonly Dictionary<EAnnotationText, (string chinese, string english)> Texts =
             new Dictionary<EAnnotationText, (string chinese, string english)>
             {
-                { EAnnotationText.SettingsPageLabel, ("Lin 编辑器绘制", "Lin Editor Drawer") },
+                { EAnnotationText.SettingsPageLabel, ("Lin 编辑器工具", "Lin Editor Tools") },
                 { EAnnotationText.SwitchLanguage, ("English", "中文") },
                 { EAnnotationText.AssetSection, ("资源注释（Project 窗口）", "Asset annotations (Project window)") },
                 { EAnnotationText.TitleSize, ("注释字体大小", "Annotation font size") },
@@ -379,7 +403,7 @@ namespace Lin.Editor.Annotation.Settings
                 { EAnnotationText.AddMarker, ("添加标识", "Add marker") },
                 { EAnnotationText.RemoveMarker, ("移除", "Remove") },
                 { EAnnotationText.SizePreview, ("注释", "Note") },
-                { EAnnotationText.PreferenceTooltip, ("存储于 ProjectSettings/LinEditorDrawer.asset（设置项 {0}，随工程进版本库、团队共享）", "Stored in the {0} setting of ProjectSettings/LinEditorDrawer.asset (versioned with the project, shared across the team)") },
+                { EAnnotationText.PreferenceTooltip, ("存储于 ProjectSettings/LinEditorTools.asset（设置项 {0}，随工程进版本库、团队共享）", "Stored in the {0} setting of ProjectSettings/LinEditorTools.asset (versioned with the project, shared across the team)") },
                 { EAnnotationText.ClickNone, ("无响应", "None") },
                 { EAnnotationText.ClickSingle, ("单击", "Single click") },
                 { EAnnotationText.ClickDouble, ("双击", "Double click") },
@@ -403,7 +427,7 @@ namespace Lin.Editor.Annotation.Settings
                 { EAnnotationText.ToolbarAnnotationTooltip, ("打开注释设置", "Open annotation settings") },
                 { EAnnotationText.TimeScaleLabel, ("时间倍率", "Time Scale") },
                 { EAnnotationText.TimeScaleTooltip, ("TimeScale控制器", "Time Scale Controller") },
-                { EAnnotationText.ImportSection, ("导入策略（原 com.lin.editor-asset-import）", "Import policy (was com.lin.editor-asset-import)") },
+                { EAnnotationText.ImportSection, ("导入策略", "Import policy") },
                 { EAnnotationText.ImportEnabled, ("启用导入自动处理", "Apply import settings automatically") },
                 { EAnnotationText.ImportEnabledTooltip, ("关闭时三个导入回调直接返回，不动任何 importer。装包后默认关闭。", "When off, the import callbacks return immediately and touch no importer. Off by default after install.") },
                 { EAnnotationText.ImportVideoEnabled, ("启用视频转码", "Enable video transcoding") },
@@ -421,7 +445,11 @@ namespace Lin.Editor.Annotation.Settings
                 { EAnnotationText.VoiceKeywords, ("语音关键字", "Voice keywords") },
                 { EAnnotationText.LoopSuffix, ("循环后缀", "Loop suffix") },
                 { EAnnotationText.LoopSuffixTooltip, ("clip 名以此结尾则 loopTime = true。", "A clip whose name ends with this gets loopTime = true.") },
-                { EAnnotationText.AddItem, ("添加", "Add") }
+                { EAnnotationText.AddItem, ("添加", "Add") },
+                { EAnnotationText.SceneViewSection, ("SceneView 叠加", "SceneView overlay") },
+                { EAnnotationText.RendererInfoEnabled, ("显示选中物体信息", "Show selected object info") },
+                { EAnnotationText.RendererInfoEnabledTooltip, ("在 SceneView 里绘制选中物体的包围盒，并统计顶点数与三角面数。", "Draws the selected object's bounds in the SceneView with vertex and triangle counts.") },
+                { EAnnotationText.RendererInfoColor, ("信息颜色", "Info color") }
             };
 
         public static event System.Action LanguageChanged;

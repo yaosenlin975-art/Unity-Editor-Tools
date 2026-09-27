@@ -1,19 +1,19 @@
 [简体中文](README.md) | [English](README_EN.md)
 
-# Lin Editor Drawer
+# Lin Editor Tools
 
 A lightweight toolkit for Unity workflows across the Project window, Hierarchy, Scene View, Inspector, and main toolbar. Its only external dependency is `com.unity.nuget.newtonsoft-json`, which the `userData` container needs for JSON parsing. The settings page and package-owned UI support Chinese and English.
 
-> Package Manager display name: **Lin Editor Drawer**. The package ID and folder are `com.lin.editor-drawer`.
+> Package Manager display name: **Lin Editor Tools**. The package ID and folder are `com.lin.editor-tools`.
 
 ## Installation
 
-**Embedded package:** place the entire `com.lin.editor-drawer` folder under the target project's `Packages/` directory. Unity will detect it automatically.
+**Embedded package:** place the entire `com.lin.editor-tools` folder under the target project's `Packages/` directory. Unity will detect it automatically.
 
 **Local package reference:** add this entry to `Packages/manifest.json`:
 
 ```json
-"com.lin.editor-drawer": "file:<path>/com.lin.editor-drawer"
+"com.lin.editor-tools": "file:<path>/com.lin.editor-tools"
 ```
 
 You can also use **Package Manager → Add package from git URL / disk**.
@@ -118,11 +118,11 @@ public class SceneViewHints : MonoBehaviour
 
 ### Settings page
 
-Open **Project Settings → Lin Editor Drawer**. The page contains asset annotation, scene object annotation, and script annotation settings. Font size is limited to 8–32; changes refresh the Project window automatically.
+Open **Project Settings → Lin Editor Tools**. The page contains asset annotation, scene object annotation, and script annotation settings. Font size is limited to 8–32; changes refresh the Project window automatically.
 
 Click **English** or **中文** at the top right to switch languages. The settings, annotation windows, built-in toolbar text, and package menu commands update immediately. The language choice is saved in local `EditorPrefs` and remains after Unity restarts. Native Unity menus retain both language entries: the active language is enabled and the other is disabled. Open annotation windows update their labels without changing the annotation text being edited.
 
-The nine annotation display settings live in the host's `ProjectSettings/LinEditorDrawer.asset`, which this package creates on first access (text-serialized, diffable, versioned, shared with the team). The UI language and main-toolbar toggle states are **local to the current user and machine** and stay in `EditorPrefs` under the `com.lin.editor-annotation/` key prefix — otherwise one person switching to English would switch it for everyone.
+The nine annotation display settings live in the host's `ProjectSettings/LinEditorTools.asset`, which this package creates on first access (text-serialized, diffable, versioned, shared with the team). The UI language and main-toolbar toggle states are **local to the current user and machine** and stay in `EditorPrefs` under the `com.lin.editor-annotation/` key prefix — otherwise one person switching to English would switch it for everyone.
 
 Upgrade note: the nine migrated settings are **not** copied over from `EditorPrefs`; after installing this version you will see the defaults again.
 
@@ -215,6 +215,8 @@ The two Scene View attributes keep the `Lin.Runtime.Attribute` namespace, but ar
 ## Rename compatibility
 
 The package ID changed from `com.lin.editor-annotation` to `com.lin.editor-drawer`; projects using the old ID in a manifest or local package path must switch to the new ID. To preserve existing code, the C# namespaces `Lin.Editor.Annotation.*`, assembly names `Lin.Editor.Annotation` / `Lin.Runtime.Annotation`, and the `com.lin.editor-annotation/` EditorPrefs prefix remain unchanged. The annotation data file `ProjectSettings/LinEditorAnnotation.json` is the exception: it was retired in Unreleased (see above; no migration).
+
+As of 2026-09-27 the package ID changed again to `com.lin.editor-tools` (drawer was never released; both hops collapse into one): projects still on either old ID must switch to the new one. The namespace, assembly-name, and EditorPrefs-prefix compatibility promises are unchanged; the package settings file is `ProjectSettings/LinEditorTools.asset`.
 
 ## Unity compatibility
 

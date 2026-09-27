@@ -1,4 +1,4 @@
-using Lin.Editor.Annotation.Settings;
+using Lin.Editor.Settings;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEditor;
@@ -6,12 +6,12 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Lin.Editor.Annotation.Asset
+namespace Lin.Editor.Asset
 {
     /// <summary>编辑某个资源/文件夹注释的窗口。</summary>
     public class AssetSummaryWindow : EditorWindow
     {
-        private const string AssetFolder = EditorAnnotationSettings.PackagePath + "/Editor/Asset";
+        private const string AssetFolder = EditorAnnotationSettings.PackagePath + "/Editor/Asset/Summary";
 
         private ObjectField currentObjectField;
         private ColorField titleColorField;
@@ -25,7 +25,7 @@ namespace Lin.Editor.Annotation.Asset
         {
             if (string.IsNullOrEmpty(assetPath) || (!File.Exists(assetPath) && !Directory.Exists(assetPath)))
             {
-                Debug.LogError($"[Lin Editor Drawer] {assetPath} 资源不存在");
+                Debug.LogError($"[Lin Editor Tools] {assetPath} 资源不存在");
                 return;
             }
 
@@ -43,7 +43,7 @@ namespace Lin.Editor.Annotation.Asset
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{AssetFolder}/AssetSummaryWindow.uxml");
             if (visualTree == null)
             {
-                Debug.LogError($"[Lin Editor Drawer] 找不到界面定义 {AssetFolder}/AssetSummaryWindow.uxml");
+                Debug.LogError($"[Lin Editor Tools] 找不到界面定义 {AssetFolder}/AssetSummaryWindow.uxml");
                 return;
             }
 

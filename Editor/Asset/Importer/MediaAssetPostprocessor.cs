@@ -1,9 +1,9 @@
 using System.IO;
 using UnityEditor;
 using UnityEngine;
-using Lin.Editor.Annotation.Settings;   // 策略来源：老计划写的是 AssetImportSettings，那个 SO 已被 M2 并进 AnnotationSettings
+using Lin.Editor.Settings;   // 策略来源：老计划写的是 AssetImportSettings，那个 SO 已被 M2 并进 AnnotationSettings
 
-namespace Lin.Editor.AssetImport
+namespace Lin.Editor.Asset.Importer
 {
     /// <summary>导入时自动套用 AnnotationSettings。全部回调受 enabled 闸门控制。</summary>
     public class MediaAssetPostprocessor : AssetPostprocessor
@@ -11,7 +11,7 @@ namespace Lin.Editor.AssetImport
         private bool ShouldHandle =>
             assetImporter != null &&
             assetImporter.assetPath.StartsWith("Assets") &&
-            AnnotationSettings.Instance.enabled;
+            ToolsSettings_SO.Instance.enabled;
 
         private void OnPreprocessTexture()
         {

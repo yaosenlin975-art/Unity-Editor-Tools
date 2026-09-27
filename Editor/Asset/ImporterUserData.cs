@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace Lin.Editor.Annotation.Asset
+namespace Lin.Editor.Asset
 {
     /// <summary>
     /// AssetImporter.userData 的读写容器。userData 是宿主资产上的**共享**字符串，
@@ -146,7 +146,7 @@ namespace Lin.Editor.Annotation.Asset
                 catch (JsonException)
                 {
                     // 非 JSON 的 userData 保不住（无法与自有内容同串共存），至少留一条日志
-                    Debug.LogWarning($"[Lin Editor Drawer] {self.assetPath} 原有的 userData 不是 JSON，无法与注释共存，已覆盖");
+                    Debug.LogWarning($"[Lin Editor Tools] {self.assetPath} 原有的 userData 不是 JSON，无法与注释共存，已覆盖");
                 }
             }
 

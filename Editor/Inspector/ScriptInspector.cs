@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 using Lin.Runtime.Attribute;
 
-namespace Lin.Editor.Annotation.Inspector
+namespace Lin.Editor.Inspector
 {
     public static class ScriptInspector
     {
