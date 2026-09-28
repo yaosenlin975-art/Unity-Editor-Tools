@@ -297,7 +297,7 @@ namespace Lin.Editor.SceneGUI
 
         private static string ReadMemberFailed(string memberName, Exception ex)
         {
-            UnityEngine.Debug.LogError($"[Lin Editor Tools] 读取 {memberName} 失败: {ex.GetType().Name}: {ex.Message}");
+            UnityEngine.Debug.LogError($"[Lin Framework] 读取 {memberName} 失败: {ex.GetType().Name}: {ex.Message}");
             return "读取失败";
         }
 
@@ -320,7 +320,7 @@ namespace Lin.Editor.SceneGUI
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"[Lin Editor Tools] 调用 {method.Name} 失败: {ex.GetType().Name}: {ex.Message}");
+                UnityEngine.Debug.LogError($"[Lin Framework] 调用 {method.Name} 失败: {ex.GetType().Name}: {ex.Message}");
             }
         }
 

@@ -152,14 +152,14 @@ namespace Lin.Editor.Asset.Importer
             if (ImporterTags.HasUnreadableTagsKey(self.userData))
             {
                 UnityEngine.Debug.LogWarning(
-                    $"[Lin Editor Tools] {self.assetPath} 的 userData 里 {ImporterTags.TagsKey} 存在但读不出，" +
+                    $"[Lin Framework] {self.assetPath} 的 userData 里 {ImporterTags.TagsKey} 存在但读不出，" +
                     "将按未标记处理并覆盖原值 —— 若那是别家工具的格式，请关掉导入自动处理");
                 return;
             }
 
             if (ImporterTags.HasNonJsonUserData(self.userData))
                 UnityEngine.Debug.LogWarning(
-                    $"[Lin Editor Tools] {self.assetPath} 原有的 userData 不是 JSON，无法与 {ImporterTags.TagsKey} 同串共存，" +
+                    $"[Lin Framework] {self.assetPath} 原有的 userData 不是 JSON，无法与 {ImporterTags.TagsKey} 同串共存，" +
                     "tag 写入会整体覆盖原值 —— 若那是别家工具的格式，请关掉导入自动处理");
         }
     }

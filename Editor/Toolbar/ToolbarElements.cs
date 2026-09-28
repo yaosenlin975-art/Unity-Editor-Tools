@@ -49,7 +49,7 @@ namespace Lin.Editor.Toolbar
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"[Lin Editor Tools] 构建工具栏元素失败: {ex.GetType().Name}: {ex.Message}");
+                UnityEngine.Debug.LogError($"[Lin Framework] 构建工具栏元素失败: {ex.GetType().Name}: {ex.Message}");
             }
 
             EditorApplication.update -= OnUpdate;

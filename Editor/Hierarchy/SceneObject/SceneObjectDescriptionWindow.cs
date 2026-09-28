@@ -58,7 +58,7 @@ namespace Lin.Editor.Hierarchy.SceneObject
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{AssetFolder}/SceneObjectDescriptionWindow.uxml");
             if (visualTree == null)
             {
-                Debug.LogError($"[Lin Editor Tools] 找不到界面定义 {AssetFolder}/SceneObjectDescriptionWindow.uxml");
+                Debug.LogError($"[Lin Framework] 找不到界面定义 {AssetFolder}/SceneObjectDescriptionWindow.uxml");
                 return;
             }
 

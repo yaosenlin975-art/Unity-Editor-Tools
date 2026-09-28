@@ -97,6 +97,6 @@ namespace Lin.Editor.Hierarchy
             }
         }
 
-        private static void Error(string message) => UnityEngine.Debug.LogError($"[Lin Editor Tools] {message}");
+        private static void Error(string message) => UnityEngine.Debug.LogError($"[Lin Framework] {message}");
     }
 }

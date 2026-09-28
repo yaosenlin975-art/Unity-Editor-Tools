@@ -46,7 +46,7 @@ namespace Lin.Editor.ScriptTemplate
             string sourceDirectory = SourceDirectory;
             if (string.IsNullOrEmpty(sourceDirectory) || !Directory.Exists(sourceDirectory))
             {
-                Debug.LogError($"[Lin Editor Tools] 找不到脚本模板源目录: {sourceDirectory}");
+                Debug.LogError($"[Lin Framework] 找不到脚本模板源目录: {sourceDirectory}");
                 return;
             }
 

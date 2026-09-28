@@ -371,7 +371,7 @@ namespace Lin.Editor.Asset.Importer
 
         #region - 日志 -
 
-        private const string Prefix = "[Lin Editor Tools] ";
+        private const string Prefix = "[Lin Framework] ";
 
         private static void Log(string message, Object context = null) => Debug.Log(Prefix + message, context);
 
