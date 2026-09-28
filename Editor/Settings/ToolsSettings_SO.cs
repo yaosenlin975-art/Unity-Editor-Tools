@@ -24,7 +24,12 @@ namespace Lin.Editor.Settings
         internal const int SceneOverlayVersion = 3;
 
         /// <summary>v4：TODO 收集的三个字段（输出目录名 + 两个忽略表）随 TodoCollector 从宿主 EditorSettings_SO 移植并级。</summary>
-        internal const int CurrentVersion = 4;
+        internal const int TodoMergeVersion = 4;
+
+        /// <summary>v5：音频「关键字」改为「文件夹」识别；平台分组四项改为包内固定默认，随字段一并删除。</summary>
+        internal const int FolderNamingVersion = 5;
+
+        internal const int CurrentVersion = 5;
 
         public int settingsVersion;
 
@@ -45,17 +50,15 @@ namespace Lin.Editor.Settings
         public bool enabled;
         public bool videoEnabled;
 
-        /// <summary>只有这一组写 SetPlatformTextureSettings 覆盖。</summary>
-        public string[] overriddenPlatforms = { "Standalone", "Android", "iPhone" };
+        // 平台分组（覆盖平台 / 跟随构建默认 / 全局纹理上限 / PC 平台名）已改为包内固定默认，
+        // 见 Lin.Editor.Asset.Importer.ImportPolicyDefaults —— 属技术约定，不再是工程配置。
 
-        /// <summary>这一组不建覆盖，格式由引擎按构建目标决定；尺寸走 globalMaxTextureSize。</summary>
-        public string[] followBuildDefaultPlatforms = { "WebGL", "WeixinMiniGame" };
+        /// <summary>BGM 文件夹：资源路径落在其中任一目录下即判为 BGM。</summary>
+        public string[] bgmFolders = { "Assets/Arts/Audio/BGM" };
 
-        public int globalMaxTextureSize = 2048;
-        public string pcPlatform = "Standalone";
+        /// <summary>语音文件夹：资源路径落在其中任一目录下即判为语音。</summary>
+        public string[] voiceFolders = { "Assets/Arts/Audio/Voice" };
 
-        public string[] bgmKeywords = { "BGM", "背景" };
-        public string[] voiceKeywords = { "Voice" };
         public string loopSuffix = "_Loop";
 
         // ----------------- SceneView 叠加（原宿主 EditorSettings_SO 的 drawRendererInfos_SV / infosColor_SV，随 SceneRendererInfoDrawer 移植并级） -----------------
@@ -126,40 +129,6 @@ namespace Lin.Editor.Settings
             }
         }
 
-        internal bool IsOverridden(string platform) => Contains(overriddenPlatforms, platform);
-
-        internal bool IsWebPlatform(string platform) => Contains(followBuildDefaultPlatforms, platform);
-
-        /// <summary>
-        /// 覆盖组的空安全视图：数组为 null（老文件缺字段、或 `settingsVersion` 高于 CurrentVersion 而没被 Migrate 补过）
-        /// 就给空序列，串为空/空的元素一律跳过 —— 平台名空着传给 importer API 是一次静默的错配置。
-        /// 生产侧的三处循环（纹理/音频/图集）与音频跟随组的载体选择都读这两个访问器，不再 foreach 裸数组。
-        /// </summary>
-        internal IEnumerable<string> OverriddenPlatformNames => Named(overriddenPlatforms);
-
-        /// <summary>跟随构建组的空安全视图，语义同 <see cref="OverriddenPlatformNames"/>。</summary>
-        internal IEnumerable<string> FollowBuildDefaultPlatformNames => Named(followBuildDefaultPlatforms);
-
-        private static IEnumerable<string> Named(string[] list)
-        {
-            if (list == null)
-                yield break;
-
-            for (int i = 0; i < list.Length; i++)
-                if (!string.IsNullOrEmpty(list[i]))
-                    yield return list[i];
-        }
-
-        private static bool Contains(string[] list, string platform)
-        {
-            if (list == null || string.IsNullOrEmpty(platform))
-                return false;
-            for (int i = 0; i < list.Length; i++)
-                if (list[i] == platform)
-                    return true;
-            return false;
-        }
-
         /// <summary>
         /// 分级迁移，一次调用只升一级（升几级由调用方决定：Instance 会 while 到 CurrentVersion 才 Save()，
         /// 所以磁盘上不会留下"版本号抬了、新字段还空着"的半成品）。
@@ -168,7 +137,7 @@ namespace Lin.Editor.Settings
         /// 无法区分"用户真选了 无响应(0)"和"字段当时不存在"，所以整份回默认，认这个代价（ADR-001）。
         /// 这是注释设置自己那一版的既定取舍——那时代码里还没有真数据可丢，本轮原样保留。
         ///
-        /// v1 → v2：这一级多出来的只有导入策略那十个字段，而 v1 里的九项注释设置全是用户真调过的值。
+        /// v1 → v2：这一级多出来的只有导入策略的字段，而 v1 里的九项注释设置全是用户真调过的值。
         /// 再走一次整份回默认就会把它们静默抹掉，所以这一级只补新字段（null/0/空 → 各自默认）。
         ///
         /// v2 → v3：SceneView 叠加两个字段（sceneRendererInfoEnabled / sceneRendererInfoColor）随绘制器移植并级，
@@ -176,6 +145,9 @@ namespace Lin.Editor.Settings
         ///
         /// v3 → v4：TODO 收集三个字段随 TodoCollector 移植并级，只补新字段。目录名空回默认 "Markdown"，
         /// 两个忽略表 null 回空表（老文件缺字段反序列化成 null）。
+        ///
+        /// v4 → v5：音频「关键字」改为「文件夹」识别，平台分组四项删除（改为 ImportPolicyDefaults 固定默认）。
+        /// 老关键字值无法映射到文件夹，按 ADR-001 认这一次丢失，只补文件夹默认。
         /// </summary>
         internal void Migrate()
         {
@@ -202,16 +174,10 @@ namespace Lin.Editor.Settings
             if (settingsVersion < ImportMergeVersion)
             {
                 // enabled / videoEnabled 不碰：两个开关的默认本就是 false，回默认等于不动
-                if (overriddenPlatforms == null || overriddenPlatforms.Length == 0)
-                    overriddenPlatforms = fresh.overriddenPlatforms;
-                if (followBuildDefaultPlatforms == null || followBuildDefaultPlatforms.Length == 0)
-                    followBuildDefaultPlatforms = fresh.followBuildDefaultPlatforms;
-                if (bgmKeywords == null || bgmKeywords.Length == 0)
-                    bgmKeywords = fresh.bgmKeywords;
-                if (voiceKeywords == null || voiceKeywords.Length == 0)
-                    voiceKeywords = fresh.voiceKeywords;
-                globalMaxTextureSize = globalMaxTextureSize > 0 ? globalMaxTextureSize : fresh.globalMaxTextureSize;
-                pcPlatform = string.IsNullOrEmpty(pcPlatform) ? fresh.pcPlatform : pcPlatform;
+                if (bgmFolders == null || bgmFolders.Length == 0)
+                    bgmFolders = fresh.bgmFolders;
+                if (voiceFolders == null || voiceFolders.Length == 0)
+                    voiceFolders = fresh.voiceFolders;
                 loopSuffix = string.IsNullOrEmpty(loopSuffix) ? fresh.loopSuffix : loopSuffix;
 
                 settingsVersion = ImportMergeVersion;
@@ -226,12 +192,24 @@ namespace Lin.Editor.Settings
                 return;
             }
 
-            // v3 → v4：TODO 段三个字段；目录名空则回默认，忽略表 null 回空表（老文件缺字段会被反序列化成 null）
-            docsOutputFolderName = string.IsNullOrEmpty(docsOutputFolderName) ? fresh.docsOutputFolderName : docsOutputFolderName;
-            todoIgnoreFolders = todoIgnoreFolders ?? new List<string>();
-            todoIgnoreAssemblies = todoIgnoreAssemblies ?? new List<string>();
+            if (settingsVersion < TodoMergeVersion)
+            {
+                // v3 → v4：TODO 段三个字段；目录名空则回默认，忽略表 null 回空表（老文件缺字段会被反序列化成 null）
+                docsOutputFolderName = string.IsNullOrEmpty(docsOutputFolderName) ? fresh.docsOutputFolderName : docsOutputFolderName;
+                todoIgnoreFolders = todoIgnoreFolders ?? new List<string>();
+                todoIgnoreAssemblies = todoIgnoreAssemblies ?? new List<string>();
 
-            settingsVersion = CurrentVersion;
+                settingsVersion = TodoMergeVersion;
+                return;
+            }
+
+            // v4 → v5：音频文件夹两个字段（老版本没有，反序列化成 null），补默认
+            if (bgmFolders == null || bgmFolders.Length == 0)
+                bgmFolders = fresh.bgmFolders;
+            if (voiceFolders == null || voiceFolders.Length == 0)
+                voiceFolders = fresh.voiceFolders;
+
+            settingsVersion = FolderNamingVersion;
         }
 
         internal static void Save()

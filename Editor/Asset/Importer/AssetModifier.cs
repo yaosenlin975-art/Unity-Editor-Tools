@@ -136,7 +136,6 @@ namespace Lin.Editor.Asset.Importer
             if (importer == null || importer.ContainsUserTag(ModifiedTag))
                 return;
 
-            var settings = ToolsSettings_SO.Instance;
             TextureUsage usage;
 
             switch (importer.textureType)
@@ -174,10 +173,10 @@ namespace Lin.Editor.Asset.Importer
             importer.isReadable = false;
 
             // [W1] 只有覆盖组建平台覆盖；跟随组的尺寸走下面的全局上限
-            foreach (var platform in Available(settings.OverriddenPlatformNames, $"跳过 {importer.assetPath}", importer))
+            foreach (var platform in Available(ImportPolicyDefaults.OverriddenPlatforms, $"跳过 {importer.assetPath}", importer))
             {
                 var (format, maxSize) = PlatformTextureFormat.Get(
-                    usage, platform, settings, importer.DoesSourceTextureHaveAlpha());
+                    usage, platform, importer.DoesSourceTextureHaveAlpha());
                 importer.SetPlatformTextureSettings(new TextureImporterPlatformSettings
                 {
                     name = platform,
@@ -187,7 +186,7 @@ namespace Lin.Editor.Asset.Importer
                 });
             }
 
-            importer.maxTextureSize = settings.globalMaxTextureSize;
+            importer.maxTextureSize = ImportPolicyDefaults.GlobalMaxTextureSize;
 
             // 不变量：tag 必须在 SaveAndReimport 之前，且 AddUserTag 不自己触发重导入
             importer.AddUserTag(ModifiedTag);
@@ -218,9 +217,9 @@ namespace Lin.Editor.Asset.Importer
             // [W4] 覆盖组：SetOverrideSampleSettings 只对这三个名字落 platformSettingOverrides 行（实测键 1/4/7）。
             // 注意可用性判据挡不住 WebGL：它在 BuildTargetGroup 里是定义的（且模块已装），
             // 但对音频它照样不落盘 —— 承载 API 由分组决定，不由 IsPlatformAvailable 决定。
-            foreach (var platform in Available(settings.OverriddenPlatformNames, $"跳过 {importer.assetPath}", importer))
+            foreach (var platform in Available(ImportPolicyDefaults.OverriddenPlatforms, $"跳过 {importer.assetPath}", importer))
             {
-                var d = AudioImportPolicy.Resolve(role, platform, settings);
+                var d = AudioImportPolicy.Resolve(role, platform);
                 importer.SetOverrideSampleSettings(platform, new AudioImporterSampleSettings
                 {
                     compressionFormat = d.format,
@@ -237,10 +236,10 @@ namespace Lin.Editor.Asset.Importer
             // sampleRateSetting 恒 OverrideSampleRate，引擎钉死，所以这里不宣称给 WebGL 任何压缩格式
             // （Vorbis 只是这条 asset 级默认的字面值，对没有覆盖行的平台才生效；要钉 WebGL 的格式得走 2021.2+ 的 Format Importer）。
             // 覆盖组三行都在，asset 级默认值才敢当 Web 组的载体 —— 只有没有行的平台才吃它。
-            var web = settings.followBuildDefaultPlatforms;
+            var web = ImportPolicyDefaults.FollowBuildDefaultPlatforms;
             if (web != null && web.Length > 0)
             {
-                var d = AudioImportPolicy.Resolve(role, web[0], settings);
+                var d = AudioImportPolicy.Resolve(role, web[0]);
                 importer.defaultSampleSettings = new AudioImporterSampleSettings
                 {
                     compressionFormat = d.format,
@@ -310,10 +309,9 @@ namespace Lin.Editor.Asset.Importer
             if (atlas == null)
                 return;
 
-            var settings = ToolsSettings_SO.Instance;
             bool changed = false;
 
-            foreach (var platform in settings.overriddenPlatforms)
+            foreach (var platform in ImportPolicyDefaults.OverriddenPlatforms)
             {
                 if (!PlatformTextureFormat.IsPlatformAvailable(platform))
                 {
@@ -321,7 +319,7 @@ namespace Lin.Editor.Asset.Importer
                     continue;
                 }
 
-                var (format, maxSize) = PlatformTextureFormat.Get(TextureUsage.Atlas, platform, settings);
+                var (format, maxSize) = PlatformTextureFormat.Get(TextureUsage.Atlas, platform);
                 var current = atlas.GetPlatformSettings(platform);
                 if (current.overridden && current.format == format && current.maxTextureSize == maxSize)
                     continue;

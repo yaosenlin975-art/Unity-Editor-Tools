@@ -1,11 +1,11 @@
 using System;
 using UnityEditor;
 using UnityEngine;
-using Lin.Editor.Settings;   // 形参类型：老计划写的是 AssetImportSettings，那个 SO 已被 M2 并进 AnnotationSettings
+using Lin.Editor.Settings;   // Classify 形参：BGM / 语音文件夹列表住 ToolsSettings_SO
 
 namespace Lin.Editor.Asset.Importer
 {
-    /// <summary>音频资源的角色，由路径关键字判定。</summary>
+    /// <summary>音频资源的角色，由资源所在文件夹判定。</summary>
     public enum AudioRole { Bgm, Voice, Sfx }
 
     internal readonly struct AudioSampleDecision
@@ -29,19 +29,17 @@ namespace Lin.Editor.Asset.Importer
     /// </summary>
     public static class AudioImportPolicy
     {
+        /// <summary>按资源路径落在哪个文件夹下判定角色；两个文件夹都不命中即音效。</summary>
         internal static AudioRole Classify(string assetPath, ToolsSettings_SO settings)
         {
-            if (string.IsNullOrEmpty(assetPath))
-                return AudioRole.Sfx;
-
-            if (ContainsAny(assetPath, settings.bgmKeywords))
+            if (IsUnderAnyFolder(assetPath, settings.bgmFolders))
                 return AudioRole.Bgm;
-            if (ContainsAny(assetPath, settings.voiceKeywords))
+            if (IsUnderAnyFolder(assetPath, settings.voiceFolders))
                 return AudioRole.Voice;
             return AudioRole.Sfx;
         }
 
-        internal static AudioSampleDecision Resolve(AudioRole role, string platform, ToolsSettings_SO settings)
+        internal static AudioSampleDecision Resolve(AudioRole role, string platform)
         {
             float quality = role switch
             {
@@ -51,7 +49,7 @@ namespace Lin.Editor.Asset.Importer
             };
 
             // Web / 小游戏：流送不可用，大文件不能解压加载 → 三类统一 CompressedInMemory
-            if (settings.IsWebPlatform(platform))
+            if (ImportPolicyDefaults.IsWebPlatform(platform))
                 return new AudioSampleDecision(AudioClipLoadType.CompressedInMemory, AudioCompressionFormat.Vorbis, quality);
 
             return role switch
@@ -71,24 +69,32 @@ namespace Lin.Editor.Asset.Importer
         /// 一个 Web 名字都没有时返回 null —— 调用方整段跳过，宁可不写也不猜。
         /// 纯函数：只读设置，绝不碰 AssetImporter。
         /// </summary>
-        internal static AudioSampleDecision? WebDefault(AudioRole role, ToolsSettings_SO settings)
+        internal static AudioSampleDecision? WebDefault(AudioRole role)
         {
-            foreach (var name in settings.FollowBuildDefaultPlatformNames)
-                if (settings.IsWebPlatform(name))
-                    return Resolve(role, name, settings);
+            foreach (var name in ImportPolicyDefaults.FollowBuildDefaultPlatforms)
+                if (ImportPolicyDefaults.IsWebPlatform(name))
+                    return Resolve(role, name);
 
             return null;
         }
 
-        private static bool ContainsAny(string haystack, string[] needles)
+        /// <summary>资源路径是否落在其中任一文件夹下。文件夹按前缀匹配，需带目录分隔符，避免 "BGMX" 误命中 "BGM"。</summary>
+        private static bool IsUnderAnyFolder(string assetPath, string[] folders)
         {
-            if (needles == null)
+            if (string.IsNullOrEmpty(assetPath) || folders == null)
                 return false;
 
-            for (int i = 0; i < needles.Length; i++)
-                if (!string.IsNullOrEmpty(needles[i]) &&
-                    haystack.IndexOf(needles[i], StringComparison.OrdinalIgnoreCase) >= 0)
+            var normalized = assetPath.Replace('\\', '/');
+            for (int i = 0; i < folders.Length; i++)
+            {
+                var folder = folders[i];
+                if (string.IsNullOrEmpty(folder))
+                    continue;
+
+                folder = folder.Replace('\\', '/').TrimEnd('/');
+                if (normalized.StartsWith(folder + "/", StringComparison.OrdinalIgnoreCase))
                     return true;
+            }
 
             return false;
         }

@@ -1,6 +1,5 @@
 using System;
 using UnityEditor;
-using Lin.Editor.Settings;   // 形参类型：老计划写的是 AssetImportSettings，那个 SO 已被 M2 并进 AnnotationSettings
 
 namespace Lin.Editor.Asset.Importer
 {
@@ -24,13 +23,13 @@ namespace Lin.Editor.Asset.Importer
     {
         /// <summary>
         /// 按用途给覆盖组内的某个平台取格式与尺寸。
-        /// 只对 settings.overriddenPlatforms 调用；Web/小游戏走 SetPlatformTextureSettings 会让
+        /// 只对 ImportPolicyDefaults.OverriddenPlatforms 调用；Web/小游戏走 SetPlatformTextureSettings 会让
         /// 桌面浏览器拿不到 DXT（见 ADR-006 W1），那边由 TextureImporter.maxTextureSize 管尺寸。
         /// </summary>
         internal static (TextureImporterFormat format, int maxSize) Get(
-            TextureUsage usage, string platform, ToolsSettings_SO settings, bool hasAlpha = true)
+            TextureUsage usage, string platform, bool hasAlpha = true)
         {
-            bool isPC = platform == settings.pcPlatform;
+            bool isPC = ImportPolicyDefaults.IsPCPlatform(platform);
 
             return usage switch
             {

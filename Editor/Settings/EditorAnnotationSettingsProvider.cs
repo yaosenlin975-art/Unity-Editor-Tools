@@ -1,38 +1,80 @@
 using Lin.Editor.Asset;
 using Lin.Editor.Toolbar.Element;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
+using UnityEditor.Compilation;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Lin.Editor.Settings
 {
     /// <summary>
-    /// Project Settings 里的包配置页，分资源注释 / 场景物体注释 / 脚本注释 / 描述标识 / 导入策略 / SceneView 叠加六段。
-    /// 原先注释三段住在项目私有的 EditorSettings_SO 上，整页搬过来会把 Learn 的框架配置一起带进包，
-    /// 所以只保留与注释有关的三段；导入策略与 SceneView 叠加是后续并级进来的。
+    /// Project Settings 里的包配置。主页 <see cref="PagePath"/>（Lin Framework）保持原样画全部分段；
+    /// 另注册若干子页（资源注释 / 场景物体注释 / 脚本注释 / 导入策略 / SceneView 叠加 / TODO 收集）作快速跳转，
+    /// 点进去只画对应那一段。子页靠路径前缀挂到主页节点下。
     /// </summary>
     internal static class EditorAnnotationSettingsProvider
     {
-        public const string PagePath = "Project/Lin Editor Tools";
-        private static SettingsProvider provider;
+        public const string PagePath = "Project/Lin Framework";
+
+        private const string SubPageRoot = PagePath + "/";
+
+        private static readonly HashSet<string> SettingsKeywords = new HashSet<string>
+        {
+            "Annotation", "Hierarchy", "Toolbar", "注释", "Description", "Summary", "脚本", "Import", "导入策略", "TODO", "Todo"
+        };
+
+        // 语言切换要重设每个 provider 的 label，所以建好后都留着
+        private static readonly List<(SettingsProvider provider, EAnnotationText label)> Providers =
+            new List<(SettingsProvider, EAnnotationText)>();
+
         private static GUIStyle sizePreviewStyle;
 
         [SettingsProvider]
-        public static SettingsProvider CreateProvider()
+        public static SettingsProvider CreateHomeProvider() =>
+            Register(PagePath, EAnnotationText.SettingsPageLabel, DrawHomeGui);
+
+        [SettingsProvider]
+        public static SettingsProvider CreateAssetProvider() =>
+            Register(SubPageRoot + "Asset", EAnnotationText.SubAsset, DrawAssetSection);
+
+        [SettingsProvider]
+        public static SettingsProvider CreateSceneProvider() =>
+            Register(SubPageRoot + "Scene", EAnnotationText.SubScene, DrawSceneSection);
+
+        [SettingsProvider]
+        public static SettingsProvider CreateScriptProvider() =>
+            Register(SubPageRoot + "Script", EAnnotationText.SubScript, DrawScriptSection);
+
+        [SettingsProvider]
+        public static SettingsProvider CreateImportProvider() =>
+            Register(SubPageRoot + "Import", EAnnotationText.SubImport, ImportPolicySection);
+
+        [SettingsProvider]
+        public static SettingsProvider CreateSceneViewProvider() =>
+            Register(SubPageRoot + "SceneView", EAnnotationText.SubSceneView, SceneViewOverlaySection);
+
+        [SettingsProvider]
+        public static SettingsProvider CreateTodoProvider() =>
+            Register(SubPageRoot + "Todo", EAnnotationText.SubTodo, TodoSection);
+
+        private static SettingsProvider Register(string path, EAnnotationText label, System.Action gui)
         {
-            provider = new SettingsProvider(PagePath, SettingsScope.Project)
+            var created = new SettingsProvider(path, SettingsScope.Project)
             {
-                label = EditorAnnotationLocalization.Text(EAnnotationText.SettingsPageLabel),
-                keywords = new HashSet<string> { "Annotation", "Hierarchy", "Toolbar", "注释", "Description", "Summary", "脚本", "Import", "导入策略", "TODO", "Todo" },
-                guiHandler = _ => DrawGUI()
+                label = EditorAnnotationLocalization.Text(label),
+                keywords = SettingsKeywords,
+                guiHandler = _ => gui()
             };
+
+            Providers.Add((created, label));
             EditorAnnotationLocalization.LanguageChanged -= OnLanguageChanged;
             EditorAnnotationLocalization.LanguageChanged += OnLanguageChanged;
-            return provider;
+            return created;
         }
 
-        [MenuItem("Lin/Editor Tools - 编辑器工具/Annotation Settings - 设置界面")]
+        [MenuItem("Lin/Lin Framework - 设置界面")]
         private static void OpenFromMenu() => OpenSettings();
 
         private static void OpenSettings() => SettingsService.OpenProjectSettings(PagePath);
@@ -43,19 +85,30 @@ namespace Lin.Editor.Settings
 
         private static void OnLanguageChanged()
         {
-            if (provider != null)
-                provider.label = EditorAnnotationLocalization.Text(EAnnotationText.SettingsPageLabel);
+            for (int i = 0; i < Providers.Count; i++)
+                Providers[i].provider.label = EditorAnnotationLocalization.Text(Providers[i].label);
         }
 
-        private static void DrawGUI()
+        /// <summary>主页：语言开关 + 全部分段（与改造前一致）。子页各自只画对应一段。</summary>
+        private static void DrawHomeGui()
         {
-            bool changed = false;
-
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
             if (GUILayout.Button(EditorAnnotationLocalization.Text(EAnnotationText.SwitchLanguage), GUILayout.Width(90)))
                 EditorAnnotationLocalization.ToggleLanguage();
             GUILayout.EndHorizontal();
+
+            DrawAssetSection();
+            DrawSceneSection();
+            DrawScriptSection();
+            ImportPolicySection();
+            SceneViewOverlaySection();
+            TodoSection();
+        }
+
+        private static void DrawAssetSection()
+        {
+            bool changed = false;
 
             Section(EditorAnnotationLocalization.Text(EAnnotationText.AssetSection));
             changed |= IntSliderField(nameof(EditorAnnotationSettings.AssetSummaryTitleSize), EditorAnnotationLocalization.Text(EAnnotationText.TitleSize),
@@ -64,12 +117,29 @@ namespace Lin.Editor.Settings
             changed |= EnumField(nameof(EditorAnnotationSettings.AssetSummaryEditWay), EditorAnnotationLocalization.Text(EAnnotationText.EditOnClick),
                 EditorAnnotationSettings.AssetSummaryEditWay, v => EditorAnnotationSettings.AssetSummaryEditWay = v);
 
+            // Project 窗口的绘制结果带缓存，样式或标识变了要重扫；Hierarchy 每帧现读，不需要
+            if (changed)
+                AssetSummaryDrawer.Refresh();
+        }
+
+        private static void DrawSceneSection()
+        {
+            bool changed = false;
+
             Section(EditorAnnotationLocalization.Text(EAnnotationText.SceneSection));
             changed |= IntSliderField(nameof(EditorAnnotationSettings.SceneObjectDescriptionTitleSize), EditorAnnotationLocalization.Text(EAnnotationText.TitleSize),
                 EditorAnnotationSettings.SceneObjectDescriptionTitleSize, EditorAnnotationLocalization.Text(EAnnotationText.SizePreview),
                 v => EditorAnnotationSettings.SceneObjectDescriptionTitleSize = v);
             changed |= EnumField(nameof(EditorAnnotationSettings.SceneObjectDescriptionEditWay), EditorAnnotationLocalization.Text(EAnnotationText.EditOnClick),
                 EditorAnnotationSettings.SceneObjectDescriptionEditWay, v => EditorAnnotationSettings.SceneObjectDescriptionEditWay = v);
+
+            if (changed)
+                AssetSummaryDrawer.Refresh();
+        }
+
+        private static void DrawScriptSection()
+        {
+            bool changed = false;
 
             Section(EditorAnnotationLocalization.Text(EAnnotationText.ScriptSection));
             changed |= ColorField(nameof(EditorAnnotationSettings.ScriptDescriptionColor), EditorAnnotationLocalization.Text(EAnnotationText.Color),
@@ -83,11 +153,6 @@ namespace Lin.Editor.Settings
 
             changed |= DescriptionMarkersList();
 
-            ImportPolicySection();
-            SceneViewOverlaySection();
-            TodoSection();
-
-            // Project 窗口的绘制结果带缓存，样式或标识变了要重扫；Hierarchy 每帧现读，不需要
             if (changed)
                 AssetSummaryDrawer.Refresh();
         }
@@ -108,22 +173,12 @@ namespace Lin.Editor.Settings
             changed |= BoolField(nameof(ToolsSettings_SO.videoEnabled), EditorAnnotationLocalization.Text(EAnnotationText.ImportVideoEnabled),
                 settings.videoEnabled, v => settings.videoEnabled = v, EditorAnnotationLocalization.Text(EAnnotationText.ImportVideoEnabledTooltip));
 
-            Section(EditorAnnotationLocalization.Text(EAnnotationText.PlatformSection));
-            changed |= StringListField(nameof(ToolsSettings_SO.overriddenPlatforms), EditorAnnotationLocalization.Text(EAnnotationText.OverriddenPlatforms),
-                settings.overriddenPlatforms, v => settings.overriddenPlatforms = v, EditorAnnotationLocalization.Text(EAnnotationText.OverriddenPlatformsTooltip));
-            changed |= StringListField(nameof(ToolsSettings_SO.followBuildDefaultPlatforms), EditorAnnotationLocalization.Text(EAnnotationText.FollowBuildDefaultPlatforms),
-                settings.followBuildDefaultPlatforms, v => settings.followBuildDefaultPlatforms = v,
-                EditorAnnotationLocalization.Text(EAnnotationText.FollowBuildDefaultPlatformsTooltip));
-            changed |= IntField(nameof(ToolsSettings_SO.globalMaxTextureSize), EditorAnnotationLocalization.Text(EAnnotationText.GlobalMaxTextureSize),
-                settings.globalMaxTextureSize, v => settings.globalMaxTextureSize = v, EditorAnnotationLocalization.Text(EAnnotationText.GlobalMaxTextureSizeTooltip));
-            changed |= StringField(nameof(ToolsSettings_SO.pcPlatform), EditorAnnotationLocalization.Text(EAnnotationText.PcPlatform),
-                settings.pcPlatform, v => settings.pcPlatform = v);
-
+            // 平台分组（覆盖平台 / 跟随构建默认 / 全局纹理上限 / PC 平台名）已改为包内固定默认，不再暴露设置。
             Section(EditorAnnotationLocalization.Text(EAnnotationText.NamingSection));
-            changed |= StringListField(nameof(ToolsSettings_SO.bgmKeywords), EditorAnnotationLocalization.Text(EAnnotationText.BgmKeywords),
-                settings.bgmKeywords, v => settings.bgmKeywords = v);
-            changed |= StringListField(nameof(ToolsSettings_SO.voiceKeywords), EditorAnnotationLocalization.Text(EAnnotationText.VoiceKeywords),
-                settings.voiceKeywords, v => settings.voiceKeywords = v);
+            changed |= FolderListField(nameof(ToolsSettings_SO.bgmFolders), EditorAnnotationLocalization.Text(EAnnotationText.BgmFolders),
+                settings.bgmFolders, v => settings.bgmFolders = v, EditorAnnotationLocalization.Text(EAnnotationText.BgmFoldersTooltip));
+            changed |= FolderListField(nameof(ToolsSettings_SO.voiceFolders), EditorAnnotationLocalization.Text(EAnnotationText.VoiceFolders),
+                settings.voiceFolders, v => settings.voiceFolders = v, EditorAnnotationLocalization.Text(EAnnotationText.VoiceFoldersTooltip));
             changed |= StringField(nameof(ToolsSettings_SO.loopSuffix), EditorAnnotationLocalization.Text(EAnnotationText.LoopSuffix),
                 settings.loopSuffix, v => settings.loopSuffix = v, EditorAnnotationLocalization.Text(EAnnotationText.LoopSuffixTooltip));
 
@@ -163,13 +218,155 @@ namespace Lin.Editor.Settings
             Section(EditorAnnotationLocalization.Text(EAnnotationText.TodoSection));
             changed |= StringField(nameof(ToolsSettings_SO.docsOutputFolderName), EditorAnnotationLocalization.Text(EAnnotationText.TodoDocsFolder),
                 settings.docsOutputFolderName, v => settings.docsOutputFolderName = v, EditorAnnotationLocalization.Text(EAnnotationText.TodoDocsFolderTooltip));
-            changed |= StringListField(nameof(ToolsSettings_SO.todoIgnoreFolders), EditorAnnotationLocalization.Text(EAnnotationText.TodoIgnoreFolders),
-                settings.todoIgnoreFolders?.ToArray(), v => settings.todoIgnoreFolders = new List<string>(v));
-            changed |= StringListField(nameof(ToolsSettings_SO.todoIgnoreAssemblies), EditorAnnotationLocalization.Text(EAnnotationText.TodoIgnoreAssemblies),
-                settings.todoIgnoreAssemblies?.ToArray(), v => settings.todoIgnoreAssemblies = new List<string>(v));
+            settings.todoIgnoreFolders ??= new List<string>();
+            settings.todoIgnoreAssemblies ??= new List<string>();
+            changed |= FolderListField(nameof(ToolsSettings_SO.todoIgnoreFolders), EditorAnnotationLocalization.Text(EAnnotationText.TodoIgnoreFolders),
+                settings.todoIgnoreFolders.ToArray(), v => settings.todoIgnoreFolders = new List<string>(v), null);
+            AssemblyListField(EditorAnnotationLocalization.Text(EAnnotationText.TodoIgnoreAssemblies), null, settings.todoIgnoreAssemblies);
 
             if (changed)
                 ToolsSettings_SO.Save();
+        }
+
+        /// <summary>
+        /// 文件夹列表：添加时弹系统文件夹选择窗，只收工程内目录并转成 "Assets/..." 相对路径。
+        /// 行内可编辑/移除，返回是否有改动，由调用方统一落盘。
+        /// </summary>
+        private static bool FolderListField(string key, string label, string[] current, System.Action<string[]> apply, string tooltip)
+        {
+            EditorGUILayout.LabelField(new GUIContent(label, tooltip ?? GetTooltip(key)));
+            var items = new List<string>(current ?? new string[0]);
+            bool changed = DrawEditableRows(items);
+
+            if (GUILayout.Button(EditorAnnotationLocalization.Text(EAnnotationText.AddItem)))
+            {
+                string picked = EditorUtility.OpenFolderPanel(label, ProjectRoot, string.Empty);
+                if (!string.IsNullOrEmpty(picked))
+                {
+                    if (!TryToProjectRelativePath(picked, out string relative))
+                        EditorUtility.DisplayDialog("无法忽略", "只能选择工程目录内的文件夹。", "好");
+                    else if (!items.Contains(relative))
+                    {
+                        items.Add(relative);
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed)
+                apply(items.ToArray());
+
+            return changed;
+        }
+
+        /// <summary>忽略程序集：添加时弹出选择窗，列出 Assets 下参与编译的程序集名（与忽略判定口径一致）。</summary>
+        private static void AssemblyListField(string label, string tooltip, List<string> items)
+        {
+            EditorGUILayout.LabelField(new GUIContent(label, tooltip));
+            bool changed = DrawEditableRows(items);
+
+            if (GUILayout.Button(EditorAnnotationLocalization.Text(EAnnotationText.AddItem)))
+            {
+                var rect = GUILayoutUtility.GetLastRect();
+                ListPickerWindow.Show(rect, CollectAssetAssemblyNames(), picked =>
+                {
+                    if (!items.Contains(picked))
+                    {
+                        items.Add(picked);
+                        ToolsSettings_SO.Save();
+                    }
+                });
+            }
+
+            if (changed)
+                ToolsSettings_SO.Save();
+        }
+
+        /// <summary>一行一格地编辑字符串列表，返回是否有改动；行尾是移除按钮。</summary>
+        private static bool DrawEditableRows(List<string> items)
+        {
+            bool changed = false;
+            for (int i = 0; i < items.Count; i++)
+            {
+                EditorGUILayout.BeginHorizontal();
+                string edited = EditorGUILayout.TextField(items[i]);
+                if (edited != items[i])
+                {
+                    items[i] = edited;
+                    changed = true;
+                }
+
+                if (GUILayout.Button(EditorAnnotationLocalization.Text(EAnnotationText.RemoveMarker), GUILayout.Width(72f)))
+                {
+                    items.RemoveAt(i);
+                    changed = true;
+                    i--;
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+
+            return changed;
+        }
+
+        private static string projectRoot;
+
+        private static string ProjectRoot
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(projectRoot))
+                    projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..")).Replace('\\', '/');
+
+                return projectRoot;
+            }
+        }
+
+        /// <summary>绝对路径转工程相对路径（正斜杠）；不在工程内返回 false。</summary>
+        private static bool TryToProjectRelativePath(string absolutePath, out string relative)
+        {
+            relative = null;
+            if (string.IsNullOrEmpty(absolutePath))
+                return false;
+
+            string normalized = absolutePath.Replace('\\', '/').TrimEnd('/');
+            string root = ProjectRoot.TrimEnd('/');
+            if (!normalized.StartsWith(root + "/", System.StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            relative = normalized.Substring(root.Length + 1);
+            return !string.IsNullOrEmpty(relative);
+        }
+
+        /// <summary>Assets 下参与编译的程序集名（asmdef 名），供忽略程序集选择窗使用。</summary>
+        private static List<string> CollectAssetAssemblyNames()
+        {
+            string assetsRoot = ProjectRoot.TrimEnd('/') + "/Assets/";
+            var names = new List<string>();
+            foreach (var assembly in CompilationPipeline.GetAssemblies())
+            {
+                if (string.IsNullOrEmpty(assembly.name) || names.Contains(assembly.name))
+                    continue;
+
+                var files = assembly.sourceFiles;
+                if (files == null)
+                    continue;
+
+                for (int i = 0; i < files.Length; i++)
+                {
+                    string full = files[i].Replace('\\', '/');
+                    if (!Path.IsPathRooted(full))
+                        full = ProjectRoot.TrimEnd('/') + "/" + full;
+
+                    if (full.StartsWith(assetsRoot, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        names.Add(assembly.name);
+                        break;
+                    }
+                }
+            }
+
+            names.Sort(System.StringComparer.Ordinal);
+            return names;
         }
 
         private static void Section(string title)
@@ -200,44 +397,6 @@ namespace Lin.Editor.Settings
             if (value == current) return false;
             apply(value);
             return true;
-        }
-
-        /// <summary>字符串数组一行一格地编辑。null（老文件缺这个字段）先当空表，点一次"添加"即成表。</summary>
-        private static bool StringListField(string key, string label, string[] current, System.Action<string[]> apply, string tooltip = null)
-        {
-            EditorGUILayout.LabelField(new GUIContent(label, tooltip ?? GetTooltip(key)));
-
-            var items = new List<string>(current ?? new string[0]);
-            bool changed = false;
-            for (int i = 0; i < items.Count; i++)
-            {
-                EditorGUILayout.BeginHorizontal();
-                string item = EditorGUILayout.TextField(items[i]);
-                if (item != items[i])
-                {
-                    items[i] = item;
-                    changed = true;
-                }
-
-                if (GUILayout.Button(EditorAnnotationLocalization.Text(EAnnotationText.RemoveMarker), GUILayout.Width(72f)))
-                {
-                    items.RemoveAt(i);
-                    changed = true;
-                    i--;
-                }
-                EditorGUILayout.EndHorizontal();
-            }
-
-            if (GUILayout.Button(EditorAnnotationLocalization.Text(EAnnotationText.AddItem)))
-            {
-                items.Add(string.Empty);
-                changed = true;
-            }
-
-            if (changed)
-                apply(items.ToArray());
-
-            return changed;
         }
 
         private static bool DescriptionMarkersList()
@@ -385,17 +544,11 @@ namespace Lin.Editor.Settings
         ImportEnabledTooltip,
         ImportVideoEnabled,
         ImportVideoEnabledTooltip,
-        PlatformSection,
-        OverriddenPlatforms,
-        OverriddenPlatformsTooltip,
-        FollowBuildDefaultPlatforms,
-        FollowBuildDefaultPlatformsTooltip,
-        GlobalMaxTextureSize,
-        GlobalMaxTextureSizeTooltip,
-        PcPlatform,
         NamingSection,
-        BgmKeywords,
-        VoiceKeywords,
+        BgmFolders,
+        BgmFoldersTooltip,
+        VoiceFolders,
+        VoiceFoldersTooltip,
         LoopSuffix,
         LoopSuffixTooltip,
         AddItem,
@@ -407,7 +560,13 @@ namespace Lin.Editor.Settings
         TodoDocsFolder,
         TodoDocsFolderTooltip,
         TodoIgnoreFolders,
-        TodoIgnoreAssemblies
+        TodoIgnoreAssemblies,
+        SubAsset,
+        SubScene,
+        SubScript,
+        SubImport,
+        SubSceneView,
+        SubTodo
     }
 
     internal static class EditorAnnotationLocalization
@@ -415,7 +574,7 @@ namespace Lin.Editor.Settings
         private static readonly Dictionary<EAnnotationText, (string chinese, string english)> Texts =
             new Dictionary<EAnnotationText, (string chinese, string english)>
             {
-                { EAnnotationText.SettingsPageLabel, ("Lin 编辑器工具", "Lin Editor Tools") },
+                { EAnnotationText.SettingsPageLabel, ("Lin Framework", "Lin Framework") },
                 { EAnnotationText.SwitchLanguage, ("English", "中文") },
                 { EAnnotationText.AssetSection, ("资源注释（Project 窗口）", "Asset annotations (Project window)") },
                 { EAnnotationText.TitleSize, ("注释字体大小", "Annotation font size") },
@@ -460,17 +619,11 @@ namespace Lin.Editor.Settings
                 { EAnnotationText.ImportEnabledTooltip, ("关闭时三个导入回调直接返回，不动任何 importer。装包后默认关闭。", "When off, the import callbacks return immediately and touch no importer. Off by default after install.") },
                 { EAnnotationText.ImportVideoEnabled, ("启用视频转码", "Enable video transcoding") },
                 { EAnnotationText.ImportVideoEnabledTooltip, ("转码在导入期执行，高分辨率源可能耗时数小时。", "Transcoding runs during import; high-resolution sources can take hours.") },
-                { EAnnotationText.PlatformSection, ("平台分组", "Platform groups") },
-                { EAnnotationText.OverriddenPlatforms, ("覆盖平台", "Overridden platforms") },
-                { EAnnotationText.OverriddenPlatformsTooltip, ("逐个写 SetPlatformTextureSettings 覆盖。Web 目标不要放进来：建了覆盖会让桌面浏览器拿不到 BC 系列。", "Writes a SetPlatformTextureSettings override for each entry. Keep web targets out: an override leaves desktop browsers without the BC family.") },
-                { EAnnotationText.FollowBuildDefaultPlatforms, ("跟随构建默认", "Follow build defaults") },
-                { EAnnotationText.FollowBuildDefaultPlatformsTooltip, ("不建平台覆盖，格式由引擎按构建目标选；尺寸走下面的全局上限。", "No platform override; the engine picks the format per build target, and size is capped by the global maximum below.") },
-                { EAnnotationText.GlobalMaxTextureSize, ("全局纹理上限", "Global max texture size") },
-                { EAnnotationText.GlobalMaxTextureSizeTooltip, ("作用于未覆盖的平台，也是 Web / 小游戏的尺寸闸门。", "Applies to platforms without an override, and is the size gate for web and mini-game targets.") },
-                { EAnnotationText.PcPlatform, ("PC 平台名", "PC platform name") },
-                { EAnnotationText.NamingSection, ("命名约定", "Naming conventions") },
-                { EAnnotationText.BgmKeywords, ("BGM 关键字", "BGM keywords") },
-                { EAnnotationText.VoiceKeywords, ("语音关键字", "Voice keywords") },
+                { EAnnotationText.NamingSection, ("文件夹识别", "Folder matching") },
+                { EAnnotationText.BgmFolders, ("BGM 文件夹", "BGM folders") },
+                { EAnnotationText.BgmFoldersTooltip, ("资源路径落在其中任一目录下即判为 BGM，一行一个。", "An asset whose path is under any of these folders is treated as BGM, one per line.") },
+                { EAnnotationText.VoiceFolders, ("语音文件夹", "Voice folders") },
+                { EAnnotationText.VoiceFoldersTooltip, ("资源路径落在其中任一目录下即判为语音，一行一个。", "An asset whose path is under any of these folders is treated as voice, one per line.") },
                 { EAnnotationText.LoopSuffix, ("循环后缀", "Loop suffix") },
                 { EAnnotationText.LoopSuffixTooltip, ("clip 名以此结尾则 loopTime = true。", "A clip whose name ends with this gets loopTime = true.") },
                 { EAnnotationText.AddItem, ("添加", "Add") },
@@ -482,7 +635,13 @@ namespace Lin.Editor.Settings
                 { EAnnotationText.TodoDocsFolder, ("输出目录名", "Output folder name") },
                 { EAnnotationText.TodoDocsFolderTooltip, ("Todos.md 写到项目根下的这个目录。", "Todos.md is written to this folder under the project root.") },
                 { EAnnotationText.TodoIgnoreFolders, ("忽略的文件夹", "Ignored folders") },
-                { EAnnotationText.TodoIgnoreAssemblies, ("忽略的程序集", "Ignored assemblies") }
+                { EAnnotationText.TodoIgnoreAssemblies, ("忽略的程序集", "Ignored assemblies") },
+                { EAnnotationText.SubAsset, ("资源注释", "Asset annotations") },
+                { EAnnotationText.SubScene, ("场景物体注释", "Scene object annotations") },
+                { EAnnotationText.SubScript, ("脚本注释", "Script annotations") },
+                { EAnnotationText.SubImport, ("导入策略", "Import policy") },
+                { EAnnotationText.SubSceneView, ("SceneView 叠加", "SceneView overlay") },
+                { EAnnotationText.SubTodo, ("TODO 收集", "TODO collection") }
             };
 
         public static event System.Action LanguageChanged;
