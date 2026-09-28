@@ -3,7 +3,6 @@ using Lin.Editor.Settings;
 using Lin.Editor.Toolbar.Element;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
@@ -73,9 +72,11 @@ namespace Lin.Editor.Toolbar
             }
 
             var toolbarBtnType = typeof(ToolbarButton);
-            var editorAssemblies = assemblies.Where(c => c.FullName.Contains("Editor"));
-            foreach (var assembly in editorAssemblies)
+            foreach (var assembly in assemblies)
             {
+                if (assembly.FullName == null || !assembly.FullName.Contains("Editor"))
+                    continue;
+
                 try
                 {
                     foreach (var type in assembly.GetTypes())

@@ -59,23 +59,8 @@ namespace Lin.Editor.ScriptTool
                 scriptPaths.Add(path);
             }
 
-            Task.Run(() =>
-            {
-                try
-                {
-                    var results = CollectTodosInBackground(projectRoot, scriptPaths);
-                    string content = BuildMarkdown(results);
-                    WriteMarkdown(content, outputPath);
-
-                    EditorApplication.delayCall += () =>
-                        Debug.Log($"[TodoCollector] 已生成: {docsFolder}/Todos.md (共 {results.Count} 条)");
-                }
-                catch (Exception e)
-                {
-                    EditorApplication.delayCall += () =>
-                        Debug.LogError($"[TodoCollector] {e.Message}");
-                }
-            });
+            var worker = new CollectWorker(projectRoot, scriptPaths, outputPath, docsFolder);
+            Task.Run(worker.Run);
         }
 
         private static bool ShouldIgnorePath(string path)
@@ -168,28 +153,20 @@ namespace Lin.Editor.ScriptTool
         private static List<TodoInfo> CollectTodosInBackground(string projectRoot, List<string> scriptPaths)
         {
             var bag = new ConcurrentBag<TodoInfo>();
-            Parallel.For(0, scriptPaths.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) }, i =>
-            {
-                string assetPath = scriptPaths[i];
-                string fullPath = Path.Combine(projectRoot, assetPath.Replace('/', Path.DirectorySeparatorChar));
-                try
-                {
-                    ScanFileForTodos(fullPath, assetPath, bag);
-                }
-                catch
-                {
-                }
-            });
+            var worker = new ScanWorker(projectRoot, scriptPaths, bag);
+            Parallel.For(0, scriptPaths.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) }, worker.Scan);
 
             var list = new List<TodoInfo>(bag);
-            list.Sort((a, b) =>
-            {
-                int c = string.CompareOrdinal(a.scriptPath, b.scriptPath);
-                if (c != 0)
-                    return c;
-                return a.line.CompareTo(b.line);
-            });
+            list.Sort(CompareTodoInfo);
             return list;
+        }
+
+        private static int CompareTodoInfo(TodoInfo a, TodoInfo b)
+        {
+            int c = string.CompareOrdinal(a.scriptPath, b.scriptPath);
+            if (c != 0)
+                return c;
+            return a.line.CompareTo(b.line);
         }
 
         private static void ScanFileForTodos(string fullPath, string assetPath, ConcurrentBag<TodoInfo> bag)
@@ -320,6 +297,82 @@ namespace Lin.Editor.ScriptTool
             public string scriptPath;
             public int line;
             public string content;
+        }
+
+        /// <summary>后台收集工作器：持有输入参数，用具名方法作 Task.Run / delayCall 目标，避免闭包分配。</summary>
+        private sealed class CollectWorker
+        {
+            private readonly string projectRoot;
+            private readonly List<string> scriptPaths;
+            private readonly string outputPath;
+            private readonly string docsFolder;
+            private string logMessage;
+            private bool logError;
+
+            public CollectWorker(string projectRoot, List<string> scriptPaths, string outputPath, string docsFolder)
+            {
+                this.projectRoot = projectRoot;
+                this.scriptPaths = scriptPaths;
+                this.outputPath = outputPath;
+                this.docsFolder = docsFolder;
+            }
+
+            public void Run()
+            {
+                try
+                {
+                    var results = CollectTodosInBackground(projectRoot, scriptPaths);
+                    string content = BuildMarkdown(results);
+                    WriteMarkdown(content, outputPath);
+
+                    logMessage = string.Format("[TodoCollector] 已生成: {0}/Todos.md (共 {1} 条)", docsFolder, results.Count);
+                    logError = false;
+                }
+                catch (Exception e)
+                {
+                    logMessage = string.Format("[TodoCollector] {0}", e.Message);
+                    logError = true;
+                }
+
+                EditorApplication.delayCall += OnDelayedLog;
+            }
+
+            private void OnDelayedLog()
+            {
+                EditorApplication.delayCall -= OnDelayedLog;
+                if (logError)
+                    Debug.LogError(logMessage);
+                else
+                    Debug.Log(logMessage);
+            }
+        }
+
+        /// <summary>并行扫描工作器：用实例方法作 Parallel.For 体，避免闭包分配。</summary>
+        private sealed class ScanWorker
+        {
+            private readonly string projectRoot;
+            private readonly List<string> scriptPaths;
+            private readonly ConcurrentBag<TodoInfo> bag;
+
+            public ScanWorker(string projectRoot, List<string> scriptPaths, ConcurrentBag<TodoInfo> bag)
+            {
+                this.projectRoot = projectRoot;
+                this.scriptPaths = scriptPaths;
+                this.bag = bag;
+            }
+
+            public void Scan(int i)
+            {
+                string assetPath = scriptPaths[i];
+                string fullPath = Path.Combine(projectRoot, assetPath.Replace('/', Path.DirectorySeparatorChar));
+                try
+                {
+                    ScanFileForTodos(fullPath, assetPath, bag);
+                }
+                catch
+                {
+                }
+            }
         }
     }
 }

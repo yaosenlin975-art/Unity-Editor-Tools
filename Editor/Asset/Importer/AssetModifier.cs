@@ -339,7 +339,8 @@ namespace Lin.Editor.Asset.Importer
                 return;
 
             EditorUtility.SetDirty(atlas);
-            AssetDatabase.SaveAssets();
+            // 对象级落盘，避免 SaveAssets 全量写盘
+            AssetDatabase.SaveAssetIfDirty(atlas);
             Log($"已设置图集 {atlas.name} 平台压缩", atlas);
         }
 

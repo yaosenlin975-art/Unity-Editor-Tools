@@ -40,12 +40,13 @@ namespace Lin.Editor.Hierarchy.SceneObject
         public void SetDescription(InstanceId instanceId, string title, string description, Color titleColor)
         {
             var desCmp = GetOrAdd(instanceId);
-            {
-                desCmp.title = title;
-                desCmp.description = description;
-                desCmp.titleColor = titleColor;
-                Save(desCmp);
-            }
+            if (desCmp == null)
+                return;
+
+            desCmp.title = title;
+            desCmp.description = description;
+            desCmp.titleColor = titleColor;
+            Save(desCmp);
         }
 
         public (string title, string description, Color color) GetDescription(InstanceId instanceId)
@@ -75,6 +76,13 @@ namespace Lin.Editor.Hierarchy.SceneObject
 #else
                 GameObject target = UnityEditor.EditorUtility.InstanceIDToObject(instanceId) as GameObject;
 #endif
+                // 物体已删除时 target 为空，早退避免 AddComponent 空引用
+                if (target == null)
+                {
+                    UnityEngine.Debug.LogWarning($"[Lin Framework] 场景物体已删除，无法写入注释 (InstanceId: {instanceId})");
+                    return null;
+                }
+
                 if (!target.TryGetComponent(out result))
                     result = target.AddComponent<Description>();
                 descriptionMap[instanceId] = result;
@@ -116,7 +124,8 @@ namespace Lin.Editor.Hierarchy.SceneObject
             }
 
             var owner = description.gameObject;
-            Object.DestroyImmediate(description);
+            // 走 Undo 以便误删注释后可恢复
+            Undo.DestroyObjectImmediate(description);
             Save(owner);
         }
     }

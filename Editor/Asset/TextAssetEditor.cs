@@ -1,10 +1,9 @@
-﻿using Lin.Editor.Helper;
+using Lin.Editor.Helper;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEditor.ProjectWindowCallback;
@@ -74,14 +73,28 @@ namespace Lin.Editor.Asset
 
             if (!UnityEditor.EditorUtility.DisplayDialog("批量转换确认", 
                 $"找到 {files.Count} 个文件需要检测转换：\n" +
-                $"• .cs 文件: {files.Count(f => f.EndsWith(".cs"))}\n" +
-                $"• .txt 文件: {files.Count(f => f.EndsWith(".txt"))}\n\n" +
+                $"• .cs 文件: {CountByExtension(files, ".cs")}\n" +
+                $"• .txt 文件: {CountByExtension(files, ".txt")}\n\n" +
                 "是否继续进行批量转换？", "确定", "取消"))
             {
                 return;
             }
 
             BatchConvertFiles(files);
+        }
+
+        /// <summary>
+        /// 统计列表中以指定扩展名结尾的文件数
+        /// </summary>
+        private static int CountByExtension(List<string> files, string extension)
+        {
+            int count = 0;
+            for (int i = 0; i < files.Count; i++)
+            {
+                if (files[i].EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                    count++;
+            }
+            return count;
         }
 
         /// <summary>

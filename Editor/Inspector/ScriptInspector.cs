@@ -1,4 +1,3 @@
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using Lin.Runtime.Attribute;
@@ -16,8 +15,8 @@ namespace Lin.Editor.Inspector
             if (monoBehaviour != null)
             {
                 var nameAtt = monoBehaviour.GetType().GetCustomAttributes(typeof(NameAttribute), false);
-                if (nameAtt?.Any() ?? false)
-                    monoBehaviour.name = (nameAtt.First() as NameAttribute).Name;
+                if (nameAtt is { Length: > 0 } && nameAtt[0] is NameAttribute nameAttr)
+                    monoBehaviour.name = nameAttr.Name;
                 else
                     monoBehaviour.name = monoBehaviour.GetType().Name;
             }
