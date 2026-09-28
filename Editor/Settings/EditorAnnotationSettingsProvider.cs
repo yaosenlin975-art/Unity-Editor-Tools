@@ -11,8 +11,9 @@ namespace Lin.Editor.Settings
 {
     /// <summary>
     /// Project Settings 里的包配置。主页 <see cref="PagePath"/>（Lin Framework）保持原样画全部分段；
-    /// 另注册若干子页（资源注释 / 场景物体注释 / 脚本注释 / 导入策略 / SceneView 叠加 / TODO 收集）作快速跳转，
-    /// 点进去只画对应那一段。子页靠路径前缀挂到主页节点下。
+    /// 另注册若干子页作快速跳转，点进去只画对应那一段：三块注释设置先归到「注释」父节点下
+    /// （注释 / 资源注释 / 场景物体注释 / 脚本注释），再加导入策略 / SceneView 叠加 / TODO 收集。
+    /// 子页靠路径前缀挂到主页节点下。
     /// </summary>
     internal static class EditorAnnotationSettingsProvider
     {
@@ -25,9 +26,9 @@ namespace Lin.Editor.Settings
             "Annotation", "Hierarchy", "Toolbar", "注释", "Description", "Summary", "脚本", "Import", "导入策略", "TODO", "Todo"
         };
 
-        // 语言切换要重设每个 provider 的 label，所以建好后都留着
-        private static readonly List<(SettingsProvider provider, EAnnotationText label)> Providers =
-            new List<(SettingsProvider, EAnnotationText)>();
+        // 语言切换要重设每个 provider 的 label，所以建好后都留着；key=path，重注册（Notify 会重扫）时覆盖
+        private static readonly Dictionary<string, (SettingsProvider provider, EAnnotationText label)> Providers =
+            new Dictionary<string, (SettingsProvider, EAnnotationText)>();
 
         private static GUIStyle sizePreviewStyle;
 
@@ -36,16 +37,20 @@ namespace Lin.Editor.Settings
             Register(PagePath, EAnnotationText.SettingsPageLabel, DrawHomeGui);
 
         [SettingsProvider]
+        public static SettingsProvider CreateAnnotationsProvider() =>
+            Register(SubPageRoot + "Annotations", EAnnotationText.SubAnnotations, DrawAnnotationsSection);
+
+        [SettingsProvider]
         public static SettingsProvider CreateAssetProvider() =>
-            Register(SubPageRoot + "Asset", EAnnotationText.SubAsset, DrawAssetSection);
+            Register(SubPageRoot + "Annotations/Asset", EAnnotationText.SubAsset, DrawAssetSection);
 
         [SettingsProvider]
         public static SettingsProvider CreateSceneProvider() =>
-            Register(SubPageRoot + "Scene", EAnnotationText.SubScene, DrawSceneSection);
+            Register(SubPageRoot + "Annotations/Scene", EAnnotationText.SubScene, DrawSceneSection);
 
         [SettingsProvider]
         public static SettingsProvider CreateScriptProvider() =>
-            Register(SubPageRoot + "Script", EAnnotationText.SubScript, DrawScriptSection);
+            Register(SubPageRoot + "Annotations/Script", EAnnotationText.SubScript, DrawScriptSection);
 
         [SettingsProvider]
         public static SettingsProvider CreateImportProvider() =>
@@ -68,7 +73,7 @@ namespace Lin.Editor.Settings
                 guiHandler = _ => gui()
             };
 
-            Providers.Add((created, label));
+            Providers[path] = (created, label);
             EditorAnnotationLocalization.LanguageChanged -= OnLanguageChanged;
             EditorAnnotationLocalization.LanguageChanged += OnLanguageChanged;
             return created;
@@ -85,8 +90,11 @@ namespace Lin.Editor.Settings
 
         private static void OnLanguageChanged()
         {
-            for (int i = 0; i < Providers.Count; i++)
-                Providers[i].provider.label = EditorAnnotationLocalization.Text(Providers[i].label);
+            foreach (var entry in Providers.Values)
+                entry.provider.label = EditorAnnotationLocalization.Text(entry.label);
+
+            // 侧栏树的标题在建树时缓存，只改 label 不生效；通知 SettingsService 重建树
+            SettingsService.NotifySettingsProviderChanged();
         }
 
         /// <summary>主页：语言开关 + 全部分段（与改造前一致）。子页各自只画对应一段。</summary>
@@ -155,6 +163,14 @@ namespace Lin.Editor.Settings
 
             if (changed)
                 AssetSummaryDrawer.Refresh();
+        }
+
+        /// <summary>「注释」类目页：三块注释设置合并显示，供父节点展开时先看一眼。</summary>
+        private static void DrawAnnotationsSection()
+        {
+            DrawAssetSection();
+            DrawSceneSection();
+            DrawScriptSection();
         }
 
         /// <summary>
@@ -561,6 +577,7 @@ namespace Lin.Editor.Settings
         TodoDocsFolderTooltip,
         TodoIgnoreFolders,
         TodoIgnoreAssemblies,
+        SubAnnotations,
         SubAsset,
         SubScene,
         SubScript,
@@ -636,6 +653,7 @@ namespace Lin.Editor.Settings
                 { EAnnotationText.TodoDocsFolderTooltip, ("Todos.md 写到项目根下的这个目录。", "Todos.md is written to this folder under the project root.") },
                 { EAnnotationText.TodoIgnoreFolders, ("忽略的文件夹", "Ignored folders") },
                 { EAnnotationText.TodoIgnoreAssemblies, ("忽略的程序集", "Ignored assemblies") },
+                { EAnnotationText.SubAnnotations, ("注释", "Annotations") },
                 { EAnnotationText.SubAsset, ("资源注释", "Asset annotations") },
                 { EAnnotationText.SubScene, ("场景物体注释", "Scene object annotations") },
                 { EAnnotationText.SubScript, ("脚本注释", "Script annotations") },

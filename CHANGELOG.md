@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- 变更：设置页改**分级结构**并改名——主页路径 `Project/Lin Editor Tools` → `Project/Lin Framework`、标题 `Lin 编辑器工具 / Lin Editor Tools` → **`Lin Framework`**，主页内容（语言切换 + 全部分段）不变；另注册 6 个子页（资源注释 / 场景物体注释 / 脚本注释 / 导入策略 / SceneView 叠加 / TODO 收集）挂在主页节点下作快速跳转，点进去只画对应那一段。语言切换会同步刷新所有（子）页标题。菜单入口改为 `Lin/Lin Framework - 设置界面`。
+- 变更：设置页改**分级结构**并改名——主页路径 `Project/Lin Editor Tools` → `Project/Lin Framework`、标题 `Lin 编辑器工具 / Lin Editor Tools` → **`Lin Framework`**，主页内容（语言切换 + 全部分段）不变；另注册子页作快速跳转，点进去只画对应那一段：三块注释设置归入「注释」父节点（注释 / 资源注释 / 场景物体注释 / 脚本注释），再加导入策略 / SceneView 叠加 / TODO 收集。语言切换会同步刷新所有（子）页标题（改 label 后调 `SettingsService.NotifySettingsProviderChanged()` 重建侧栏树，否则树标题是建树时缓存的、不生效）。菜单入口改为 `Lin/Lin Framework - 设置界面`。
 - 新增：设置页所有「文件夹列表」（导入策略的 BGM / 语音文件夹、TODO 收集的忽略文件夹）的**添加**改为系统文件夹选择窗（只收工程内目录，转 `Assets/...` 相对路径）；「忽略的程序集」的**添加**改为可搜索、可移动缩放的工具窗（`Editor/Settings/ListPickerWindow.cs`，列出 `Assets` 下参与编译的 asmdef 名）。不再手打字符串。
 - 变更：**导入策略「平台分组」四项改为包内固定默认**（`Editor/Asset/Importer/ImportPolicyDefaults.cs`）——覆盖平台 `{Standalone, Android, iPhone}`、跟随构建默认 `{WebGL, WeixinMiniGame}`、全局纹理上限 `2048`，PC 判定由 `pcPlatform` 字符串改为按 `BuildTargetGroup` 推导（`IsPCPlatform`）。依据 Unity 文档：桌面 BCn、移动 ASTC，WebGL 覆盖会破坏桌面浏览器的 BC 分支。`ToolsSettings_SO` 删除 `overriddenPlatforms` / `followBuildDefaultPlatforms` / `globalMaxTextureSize` / `pcPlatform` 四个字段，设置页删除「平台分组」段。**破坏性变更**：这四项不再可配，`PlatformTextureFormat.Get` 去掉 settings 形参。
 - 变更：**音频「关键字」改为「文件夹」识别**（`bgmKeywords` / `voiceKeywords` → `bgmFolders` / `voiceFolders`，默认 `Assets/Arts/Audio/BGM`、`Assets/Arts/Audio/Voice`）。`AudioImportPolicy.Classify` 改为按资源路径前缀落在哪个文件夹下判定，`Resolve` 去掉 settings 形参。设置页「命名约定」段改为「文件夹识别」。`CurrentVersion` 4 → 5；v4 → v5 迁移只补文件夹默认，老关键字值不搬迁。
